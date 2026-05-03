@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -21,6 +22,10 @@ type ExporterConfig struct {
 	ProbeIntervalMs time.Duration
 	ProbeTimeoutMs  time.Duration
 
+	// Diagnostics configuration
+	DnsHostname     string
+	DiagnosticRuns  int
+
 	// Feature flags
 	SkipDiagnostics bool
 	TLSSkipVerify   bool // skip TLS certificate verification (for testing only)
@@ -38,13 +43,18 @@ type ExporterConfig struct {
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() ExporterConfig {
+	baseURL := getStringEnv("BASE_URL", "https://speed.cloudflare.com")
+	defaultDnsHostname := getHostnameFromURL(baseURL)
+
 	config := ExporterConfig{
 		Port:            getIntEnv("PORT", 9537),
 		TestIntervalMs:  getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
-		BaseURL:         getStringEnv("BASE_URL", "https://speed.cloudflare.com"),
+		BaseURL:         baseURL,
 		Concurrency:     getIntEnv("CONCURRENCY", 6),
 		ProbeIntervalMs: getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
 		ProbeTimeoutMs:  getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
+		DnsHostname:     getStringEnv("DNS_HOSTNAME", defaultDnsHostname),
+		DiagnosticRuns:  getIntEnv("DIAGNOSTIC_RUNS", 10),
 		SkipDiagnostics: getBoolEnv("SKIP_DIAGNOSTICS", false),
 	}
 
@@ -75,6 +85,14 @@ func LoadConfig() ExporterConfig {
 	}
 
 	return config
+}
+
+func getHostnameFromURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	return u.Hostname()
 }
 
 func getStringEnv(key, defaultValue string) string {

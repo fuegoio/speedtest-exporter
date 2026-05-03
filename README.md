@@ -69,29 +69,29 @@ Most metrics share a common set of labels that describe the test context:
 
 ### DNS Metrics
 
-| Metric                             | Labels                   | Description                                                  |
-| ---------------------------------- | ------------------------ | ------------------------------------------------------------ |
-| `speedtest_dns_resolution_time_ms` | `hostname`, `dns_server` | DNS resolution time in milliseconds (histogram over 10 runs) |
+| Metric                             | Labels                   | Description                                     |
+| ---------------------------------- | ------------------------ | ----------------------------------------------- |
+| `speedtest_dns_resolution_time_ms` | `hostname`, `dns_server` | DNS resolution time in milliseconds (histogram) |
 
 DNS metrics do not carry the common labels.
 
-- `hostname`: the hostname being resolved
+- `hostname`: the hostname being resolved (configurable via `DNS_HOSTNAME`)
 - `dns_server`: comma-separated list of DNS servers used
 
-**Note**: Histogram metric. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
+**Note**: Histogram metric. Each test run contributes `DIAGNOSTIC_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### TLS Metrics
 
-| Metric                            | Labels                     | Description                                                 |
-| --------------------------------- | -------------------------- | ----------------------------------------------------------- |
-| `speedtest_tls_handshake_time_ms` | `protocol`, `cipher_suite` | TLS handshake time in milliseconds (histogram over 10 runs) |
+| Metric                            | Labels                     | Description                                    |
+| --------------------------------- | -------------------------- | ---------------------------------------------- |
+| `speedtest_tls_handshake_time_ms` | `protocol`, `cipher_suite` | TLS handshake time in milliseconds (histogram) |
 
 TLS metrics do not carry the common labels.
 
 - `protocol`: TLS protocol version negotiated (e.g. `TLSv1.3`)
 - `cipher_suite`: cipher suite negotiated (e.g. `TLS_AES_128_GCM_SHA256`)
 
-**Note**: Histogram metric. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
+**Note**: Histogram metric. Each test run contributes `DIAGNOSTIC_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Network Information Metrics
 
@@ -158,15 +158,16 @@ All configuration is done via environment variables:
 | `PROBE_INTERVAL_MS` | 250                          | Interval between latency probes        |
 | `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
 | `SKIP_DIAGNOSTICS`  | false                        | Skip DNS and TLS diagnostics           |
-
-| `ASN` | - | Override ASN |
-| `AS_ORG` | - | Override AS organization |
-| `INTERFACE_NAME` | - | Override interface name |
-| `NETWORK_NAME` | - | Override network name |
-| `LOCAL_IPV4` | - | Override local IPv4 |
-| `LOCAL_IPV6` | - | Override local IPv6 |
-| `EXTERNAL_IPV4` | - | Override external IPv4 |
-| `EXTERNAL_IPV6` | - | Override external IPv6 |
+| `DNS_HOSTNAME`      | hostname from `BASE_URL`     | Hostname to resolve in DNS tests       |
+| `DIAGNOSTIC_RUNS`   | 10                           | Number of runs for DNS and TLS tests   |
+| `ASN`               | -                            | Override ASN                           |
+| `AS_ORG`            | -                            | Override AS organization               |
+| `INTERFACE_NAME`    | -                            | Override interface name                |
+| `NETWORK_NAME`      | -                            | Override network name                  |
+| `LOCAL_IPV4`        | -                            | Override local IPv4                    |
+| `LOCAL_IPV6`        | -                            | Override local IPv6                    |
+| `EXTERNAL_IPV4`     | -                            | Override external IPv4                 |
+| `EXTERNAL_IPV6`     | -                            | Override external IPv6                 |
 
 ### Example with custom configuration
 

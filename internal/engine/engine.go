@@ -650,10 +650,10 @@ func (c *CloudflareSpeedtest) measureUploadThroughput(url string, size int64, du
 	}
 }
 
-// measureDns measures DNS resolution time over 10 runs
+// measureDns measures DNS resolution time over the configured number of runs
 func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
-	const runs = 10
-	hostname := getHostname(c.config.BaseURL)
+	runs := c.config.DiagnosticRuns
+	hostname := c.config.DnsHostname
 
 	var samples []float64
 	var resolvedIPs []string
@@ -691,9 +691,9 @@ func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
 	}
 }
 
-// measureTls measures TLS handshake time over 10 runs
+// measureTls measures TLS handshake time over the configured number of runs
 func (c *CloudflareSpeedtest) measureTls() *model.TlsSummary {
-	const runs = 10
+	runs := c.config.DiagnosticRuns
 
 	var samples []float64
 	var protocol, cipher string
