@@ -87,7 +87,6 @@ export interface RunResult {
   as_org?: string;
   interface_name?: string;
   network_name?: string;
-  is_wireless?: boolean;
   interface_mac?: string;
   local_ipv4?: string;
   local_ipv6?: string;

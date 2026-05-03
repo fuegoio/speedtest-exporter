@@ -1,5 +1,6 @@
 import type { ExporterConfig } from "./config";
 import type { LatencySummary, ThroughputSummary, DnsSummary, TlsSummary, RunResult } from "./model";
+import { networkInterfaces } from "os";
 
 // Generate a random measurement ID
 function generateMeasId(): string {
@@ -7,6 +8,127 @@ function generateMeasId(): string {
   crypto.getRandomValues(bytes);
   const view = new DataView(bytes.buffer);
   return view.getBigUint64(0, true).toString();
+}
+
+// Network information from external services
+interface NetworkInfo {
+  asn?: string;
+  as_org?: string;
+  external_ipv4?: string;
+  external_ipv6?: string;
+}
+
+// Fetch network info from ifconfig.co with timeout wrapper
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// Fetch network info from ifconfig.co
+export async function fetchNetworkInfo(): Promise<NetworkInfo> {
+  try {
+    // Try ifconfig.co first - it provides ASN and org info
+    const response = await fetchWithTimeout(
+      "https://ifconfig.co/json",
+      { method: "GET", headers: { "User-Agent": "speedtest-exporter/1.0" } },
+      5000,
+    );
+
+    if (response.ok) {
+      const data = (await response.json()) as {
+        asn?: string | number;
+        asn_org?: string;
+        asn_description?: string;
+        ipv4?: string;
+        ipv6?: string;
+      };
+      return {
+        asn: data.asn?.toString(),
+        as_org: data.asn_org || data.asn_description,
+        external_ipv4: data.ipv4,
+        external_ipv6: data.ipv6,
+      };
+    }
+  } catch {
+    // Fall through to Cloudflare
+  }
+
+  // Fallback: try Cloudflare's IP endpoints
+  try {
+    const ipv4Response = await fetchWithTimeout("https://api.ipify.org?format=json", {}, 5000);
+    const ipv4Data = (await ipv4Response.json()) as { ip?: string };
+
+    const ipv6Response = await fetchWithTimeout("https://api6.ipify.org?format=json", {}, 5000);
+    const ipv6Data = (await ipv6Response.json()) as { ip?: string };
+
+    return {
+      external_ipv4: ipv4Data.ip,
+      external_ipv6: ipv6Data.ip,
+    };
+  } catch {
+    // Return empty - we'll use what we have from trace
+  }
+
+  return {};
+}
+
+// Get local network info from system
+export function getLocalNetworkInfo(): {
+  local_ipv4?: string;
+  local_ipv6?: string;
+  interface_name?: string;
+  network_name?: string;
+} {
+  try {
+    // Try to get local IP addresses from OS
+    const network = networkInterfaces();
+
+    let localIpv4: string | undefined;
+    let localIpv6: string | undefined;
+    let interfaceName: string | undefined;
+    let networkName: string | undefined;
+
+    for (const [iface, addrs] of Object.entries(network)) {
+      if (!addrs) continue;
+
+      for (const addr of addrs) {
+        if (addr.internal) continue;
+
+        if (addr.family === "IPv4" && !localIpv4) {
+          localIpv4 = addr.address;
+          interfaceName = iface;
+          networkName = iface;
+        }
+
+        if (addr.family === "IPv6" && !localIpv6) {
+          localIpv6 = addr.address;
+        }
+      }
+    }
+
+    return {
+      local_ipv4: localIpv4,
+      local_ipv6: localIpv6,
+      interface_name: interfaceName,
+      network_name: networkName,
+    };
+  } catch {
+    return {};
+  }
 }
 
 // Cloudflare speedtest engine
@@ -21,6 +143,10 @@ export class CloudflareSpeedtest {
     const measId = generateMeasId();
 
     try {
+      // Fetch network info from external services
+      const networkInfo = await fetchNetworkInfo();
+      const localNetworkInfo = getLocalNetworkInfo();
+
       // First, get the test configuration from Cloudflare
       const configResponse = await fetch(`${this.config.baseUrl}/cdn-cgi/trace`);
       const traceText = await configResponse.text();
@@ -34,7 +160,7 @@ export class CloudflareSpeedtest {
         .find((line) => line.startsWith("colo="))
         ?.split("=")[1];
 
-      // Get external IP
+      // Get external IP from trace as fallback
       const ipResponse = await fetch(`${this.config.baseUrl}/cdn-cgi/trace`);
       const ipText = await ipResponse.text();
       const externalIp = ipText
@@ -106,16 +232,15 @@ export class CloudflareSpeedtest {
         loaded_latency_upload: loadedLatencyUpload,
         dns,
         tls,
-        // Network info (we'll set these from environment or system)
-        asn: process.env.ASN,
-        as_org: process.env.AS_ORG,
-        interface_name: process.env.INTERFACE_NAME,
-        network_name: process.env.NETWORK_NAME,
-        is_wireless: process.env.IS_WIRELESS === "true",
-        local_ipv4: process.env.LOCAL_IPV4,
-        local_ipv6: process.env.LOCAL_IPV6,
-        external_ipv4: externalIp,
-        external_ipv6: process.env.EXTERNAL_IPV6,
+        // Network info from external services and system
+        asn: networkInfo.asn,
+        as_org: networkInfo.as_org,
+        interface_name: localNetworkInfo.interface_name,
+        network_name: localNetworkInfo.network_name,
+        local_ipv4: localNetworkInfo.local_ipv4,
+        local_ipv6: localNetworkInfo.local_ipv6,
+        external_ipv4: networkInfo.external_ipv4 || externalIp,
+        external_ipv6: networkInfo.external_ipv6,
       };
     } catch (error) {
       console.error("Error in direct test:", error);

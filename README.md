@@ -54,7 +54,6 @@ All metrics are prefixed with `speedtest_` for easy filtering in Prometheus.
 - `speedtest_local_ipv6` - Local IPv6 address presence
 - `speedtest_external_ipv4` - External IPv4 address presence
 - `speedtest_external_ipv6` - External IPv6 address presence
-- `speedtest_is_wireless` - Whether connection is wireless
 
 ### Test Metadata
 
@@ -110,14 +109,28 @@ All configuration is done via environment variables:
 | `PROBE_TIMEOUT_MS`         | 800                          | Probe timeout                    |
 | `SKIP_DIAGNOSTICS`         | false                        | Skip DNS/TLS diagnostics         |
 | `TRACEROUTE`               | false                        | Run traceroute                   |
-| `ASN`                      | -                            | ASN for labeling metrics         |
-| `AS_ORG`                   | -                            | AS organization for labeling     |
-| `INTERFACE_NAME`           | -                            | Network interface name           |
-| `NETWORK_NAME`             | -                            | Network name                     |
-| `IS_WIRELESS`              | -                            | Whether connection is wireless   |
-| `LOCAL_IPV4`               | -                            | Local IPv4 address               |
-| `LOCAL_IPV6`               | -                            | Local IPv6 address               |
-| `EXTERNAL_IPV6`            | -                            | External IPv6 address            |
+
+### Network Information
+
+Network information (ASN, AS organization, local/external IPs, interface details) is **automatically fetched** from external services and the local system. The exporter uses:
+
+- **ifconfig.co** - Primary source for ASN, AS organization, and external IP addresses
+- **api.ipify.org** - Fallback for external IPv4 address
+- **api6.ipify.org** - Fallback for external IPv6 address
+- **OS network interfaces** - Local IP addresses and interface information
+
+If you need to override any of these values (e.g., in a containerized environment), you can still use the following environment variables:
+
+| Variable         | Description                  |
+| ---------------- | ---------------------------- |
+| `ASN`            | ASN for labeling metrics     |
+| `AS_ORG`         | AS organization for labeling |
+| `INTERFACE_NAME` | Network interface name       |
+| `NETWORK_NAME`   | Network name                 |
+| `LOCAL_IPV4`     | Local IPv4 address           |
+| `LOCAL_IPV6`     | Local IPv6 address           |
+| `EXTERNAL_IPV4`  | External IPv4 address        |
+| `EXTERNAL_IPV6`  | External IPv6 address        |
 
 ## Usage
 

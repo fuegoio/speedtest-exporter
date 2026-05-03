@@ -16,7 +16,6 @@ describe("metricsUpdater", () => {
     as_org: "Test Org",
     interface_name: "eth0",
     network_name: "Test Network",
-    is_wireless: false,
     idle_latency: {
       sent: 10,
       received: 10,

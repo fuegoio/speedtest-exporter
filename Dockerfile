@@ -19,11 +19,11 @@ COPY src/ ./src/
 # --compile bundles the Bun runtime and all dependencies into a single binary
 RUN bun build --compile --outfile /app/dist/index src/index.ts
 
-# Final stage: Minimal runtime image
-FROM alpine:3.20
+# Final stage: Minimal runtime image with glibc
+FROM debian:stable-slim
 
 # Install only curl for health check
-RUN apk add --no-cache curl && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -33,11 +33,8 @@ COPY --from=builder /app/dist/index /app/speedtest-exporter
 # Make executable
 RUN chmod +x /app/speedtest-exporter
 
-# Create non-root user for security
-RUN adduser -D appuser
-
-# Ensure binary has correct permissions (run as root before switching user)
-RUN chown appuser:appuser /app/speedtest-exporter
+# Create non-root user
+RUN useradd -r appuser && chown appuser:appuser /app/speedtest-exporter
 
 # Switch to non-root user
 USER appuser

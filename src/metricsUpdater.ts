@@ -37,7 +37,6 @@ import {
   localIpv6,
   externalIpv4,
   externalIpv6,
-  isWireless,
   testTimestamp,
   testDurationTotalMs,
   testRunsTotal,
@@ -216,8 +215,5 @@ export function updateMetrics(result: RunResult) {
   }
   if (result.external_ipv6) {
     externalIpv6.set({ address: result.external_ipv6 }, 1);
-  }
-  if (result.is_wireless !== undefined) {
-    isWireless.set({}, result.is_wireless ? 1 : 0);
   }
 }

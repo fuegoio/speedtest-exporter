@@ -239,11 +239,6 @@ export const externalIpv6 = new client.Gauge({
   labelNames: ["address"],
 });
 
-export const isWireless = new client.Gauge({
-  name: "speedtest_is_wireless",
-  help: "Whether the connection is wireless (1 = yes, 0 = no)",
-});
-
 // Test metadata
 export const testTimestamp = new client.Gauge({
   name: "speedtest_test_timestamp",
@@ -306,7 +301,6 @@ register.registerMetric(localIpv4);
 register.registerMetric(localIpv6);
 register.registerMetric(externalIpv4);
 register.registerMetric(externalIpv6);
-register.registerMetric(isWireless);
 register.registerMetric(testTimestamp);
 register.registerMetric(testDurationTotalMs);
 register.registerMetric(testErrorsTotal);

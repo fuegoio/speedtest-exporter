@@ -184,7 +184,6 @@ describe("model", () => {
         as_org: "Example Org",
         interface_name: "eth0",
         network_name: "Example Network",
-        is_wireless: false,
         local_ipv4: "192.168.1.1",
         local_ipv6: "::1",
         external_ipv4: "1.2.3.4",
@@ -206,7 +205,6 @@ describe("model", () => {
       expect(result.version).toBe("1.0.0");
       expect(result.server).toBe("FRA");
       expect(result.asn).toBe("12345");
-      expect(result.is_wireless).toBe(false);
     });
   });
 });

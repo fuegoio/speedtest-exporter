@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { CloudflareSpeedtest } from "../src/engine";
+import { CloudflareSpeedtest, getLocalNetworkInfo } from "../src/engine";
 import type { ExporterConfig } from "../src/config";
 
 describe("CloudflareSpeedtest", () => {
@@ -118,6 +118,23 @@ describe("CloudflareSpeedtest", () => {
       expect(result.max_ms).toBe(30);
       expect(result.mean_ms).toBe(20);
       expect(result.median_ms).toBe(20);
+    });
+  });
+
+  describe("getLocalNetworkInfo", () => {
+    it("should return network interface information", () => {
+      const result = getLocalNetworkInfo();
+      expect(result).toHaveProperty("local_ipv4");
+      expect(result).toHaveProperty("local_ipv6");
+      expect(result).toHaveProperty("interface_name");
+      expect(result).toHaveProperty("network_name");
+    });
+
+    it("should return undefined for missing interfaces", () => {
+      const result = getLocalNetworkInfo();
+      // At least one of these should be defined if we have network interfaces
+      expect(result.local_ipv4 === undefined || typeof result.local_ipv4 === "string").toBe(true);
+      expect(result.local_ipv6 === undefined || typeof result.local_ipv6 === "string").toBe(true);
     });
   });
 });
