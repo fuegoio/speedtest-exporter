@@ -232,15 +232,15 @@ export class CloudflareSpeedtest {
         loaded_latency_upload: loadedLatencyUpload,
         dns,
         tls,
-        // Network info from external services and system
-        asn: networkInfo.asn,
-        as_org: networkInfo.as_org,
-        interface_name: localNetworkInfo.interface_name,
-        network_name: localNetworkInfo.network_name,
-        local_ipv4: localNetworkInfo.local_ipv4,
-        local_ipv6: localNetworkInfo.local_ipv6,
-        external_ipv4: networkInfo.external_ipv4 || externalIp,
-        external_ipv6: networkInfo.external_ipv6,
+        // Network info from external services and system, with config overrides
+        asn: this.config.asn || networkInfo.asn,
+        as_org: this.config.asOrg || networkInfo.as_org,
+        interface_name: this.config.interfaceName || localNetworkInfo.interface_name,
+        network_name: this.config.networkName || localNetworkInfo.network_name,
+        local_ipv4: this.config.localIpv4 || localNetworkInfo.local_ipv4,
+        local_ipv6: this.config.localIpv6 || localNetworkInfo.local_ipv6,
+        external_ipv4: this.config.externalIpv4 || networkInfo.external_ipv4 || externalIp,
+        external_ipv6: this.config.externalIpv6 || networkInfo.external_ipv6,
       };
     } catch (error) {
       console.error("Error in direct test:", error);

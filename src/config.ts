@@ -30,6 +30,16 @@ export const configSchema = z.object({
   traceroute: z
     .preprocess((v) => (typeof v === "string" ? v.toLowerCase() === "true" : v), z.boolean())
     .default(false),
+
+  // Network information overrides
+  asn: z.string().optional(),
+  asOrg: z.string().optional(),
+  interfaceName: z.string().optional(),
+  networkName: z.string().optional(),
+  localIpv4: z.string().optional(),
+  localIpv6: z.string().optional(),
+  externalIpv4: z.string().optional(),
+  externalIpv6: z.string().optional(),
 });
 
 // ExporterConfig type derived from schema
@@ -51,5 +61,14 @@ export function loadConfig(): ExporterConfig {
     probeTimeoutMs: process.env.PROBE_TIMEOUT_MS,
     skipDiagnostics: process.env.SKIP_DIAGNOSTICS,
     traceroute: process.env.TRACEROUTE,
+    // Network information overrides
+    asn: process.env.ASN,
+    asOrg: process.env.AS_ORG,
+    interfaceName: process.env.INTERFACE_NAME,
+    networkName: process.env.NETWORK_NAME,
+    localIpv4: process.env.LOCAL_IPV4,
+    localIpv6: process.env.LOCAL_IPV6,
+    externalIpv4: process.env.EXTERNAL_IPV4,
+    externalIpv6: process.env.EXTERNAL_IPV6,
   });
 }
