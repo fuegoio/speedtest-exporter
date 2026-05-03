@@ -131,7 +131,7 @@ All configuration is done via environment variables:
 | `PROBE_INTERVAL_MS` | 250                          | Interval between latency probes        |
 | `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
 | `SKIP_DIAGNOSTICS`  | false                        | Skip DNS and TLS diagnostics           |
-| `TRACEROUTE`        | false                        | Enable traceroute (not implemented)    |
+
 | `ASN`               | -                            | Override ASN                           |
 | `AS_ORG`            | -                            | Override AS organization               |
 | `INTERFACE_NAME`    | -                            | Override interface name                |

@@ -23,7 +23,6 @@ type ExporterConfig struct {
 
 	// Feature flags
 	SkipDiagnostics bool
-	Traceroute      bool
 
 	// Network information overrides
 	Asn           *string
@@ -46,7 +45,6 @@ func LoadConfig() ExporterConfig {
 		ProbeIntervalMs: getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
 		ProbeTimeoutMs:  getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
 		SkipDiagnostics: getBoolEnv("SKIP_DIAGNOSTICS", false),
-		Traceroute:      getBoolEnv("TRACEROUTE", false),
 	}
 
 	// Network information overrides
