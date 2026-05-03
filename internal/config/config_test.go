@@ -30,8 +30,20 @@ func TestLoadConfigDefaults(t *testing.T) {
 		t.Errorf("Expected default Concurrency 6, got %d", cfg.Concurrency)
 	}
 
-	if cfg.SkipDiagnostics != false {
-		t.Errorf("Expected default SkipDiagnostics false, got %v", cfg.SkipDiagnostics)
+	if cfg.SkipDns != false {
+		t.Errorf("Expected default SkipDns false, got %v", cfg.SkipDns)
+	}
+
+	if cfg.SkipTls != false {
+		t.Errorf("Expected default SkipTls false, got %v", cfg.SkipTls)
+	}
+
+	if cfg.DnsRuns != 10 {
+		t.Errorf("Expected default DnsRuns 10, got %d", cfg.DnsRuns)
+	}
+
+	if cfg.TlsRuns != 10 {
+		t.Errorf("Expected default TlsRuns 10, got %d", cfg.TlsRuns)
 	}
 }
 
@@ -40,13 +52,19 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	os.Setenv("PORT", "8080")
 	os.Setenv("BASE_URL", "https://example.com")
 	os.Setenv("CONCURRENCY", "10")
-	os.Setenv("SKIP_DIAGNOSTICS", "true")
+	os.Setenv("SKIP_DNS", "true")
+	os.Setenv("SKIP_TLS", "true")
+	os.Setenv("DNS_RUNS", "5")
+	os.Setenv("TLS_RUNS", "3")
 
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("BASE_URL")
 		os.Unsetenv("CONCURRENCY")
-		os.Unsetenv("SKIP_DIAGNOSTICS")
+		os.Unsetenv("SKIP_DNS")
+		os.Unsetenv("SKIP_TLS")
+		os.Unsetenv("DNS_RUNS")
+		os.Unsetenv("TLS_RUNS")
 	}()
 
 	cfg := LoadConfig()
@@ -63,8 +81,20 @@ func TestLoadConfigFromEnv(t *testing.T) {
 		t.Errorf("Expected Concurrency 10, got %d", cfg.Concurrency)
 	}
 
-	if cfg.SkipDiagnostics != true {
-		t.Errorf("Expected SkipDiagnostics true, got %v", cfg.SkipDiagnostics)
+	if cfg.SkipDns != true {
+		t.Errorf("Expected SkipDns true, got %v", cfg.SkipDns)
+	}
+
+	if cfg.SkipTls != true {
+		t.Errorf("Expected SkipTls true, got %v", cfg.SkipTls)
+	}
+
+	if cfg.DnsRuns != 5 {
+		t.Errorf("Expected DnsRuns 5, got %d", cfg.DnsRuns)
+	}
+
+	if cfg.TlsRuns != 3 {
+		t.Errorf("Expected TlsRuns 3, got %d", cfg.TlsRuns)
 	}
 }
 

@@ -22,13 +22,15 @@ type ExporterConfig struct {
 	ProbeIntervalMs time.Duration
 	ProbeTimeoutMs  time.Duration
 
-	// Diagnostics configuration
-	DnsHostname    string
-	DiagnosticRuns int
+	// DNS diagnostics configuration
+	DnsHostname string
+	DnsRuns     int
+	SkipDns     bool
 
-	// Feature flags
-	SkipDiagnostics bool
-	TLSSkipVerify   bool // skip TLS certificate verification (for testing only)
+	// TLS diagnostics configuration
+	TlsRuns       int
+	SkipTls       bool
+	TLSSkipVerify bool // skip TLS certificate verification (for testing only)
 
 	// Network information overrides
 	Asn           *string
@@ -54,8 +56,10 @@ func LoadConfig() ExporterConfig {
 		ProbeIntervalMs: getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
 		ProbeTimeoutMs:  getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
 		DnsHostname:     getStringEnv("DNS_HOSTNAME", defaultDnsHostname),
-		DiagnosticRuns:  getIntEnv("DIAGNOSTIC_RUNS", 10),
-		SkipDiagnostics: getBoolEnv("SKIP_DIAGNOSTICS", false),
+		DnsRuns:         getIntEnv("DNS_RUNS", 10),
+		SkipDns:         getBoolEnv("SKIP_DNS", false),
+		TlsRuns:         getIntEnv("TLS_RUNS", 10),
+		SkipTls:         getBoolEnv("SKIP_TLS", false),
 	}
 
 	// Network information overrides

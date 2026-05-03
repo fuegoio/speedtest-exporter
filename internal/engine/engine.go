@@ -526,6 +526,16 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 		result.ExternalIpv6 = c.config.ExternalIpv6
 	}
 
+	// Run DNS diagnostics
+	if !c.config.SkipDns {
+		result.Dns = c.measureDns()
+	}
+
+	// Run TLS diagnostics
+	if !c.config.SkipTls {
+		result.Tls = c.measureTls()
+	}
+
 	return result, nil
 }
 
@@ -652,7 +662,7 @@ func (c *CloudflareSpeedtest) measureUploadThroughput(url string, size int64, du
 
 // measureDns measures DNS resolution time over the configured number of runs
 func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
-	runs := c.config.DiagnosticRuns
+	runs := c.config.DnsRuns
 	hostname := c.config.DnsHostname
 
 	var samples []float64
@@ -693,7 +703,7 @@ func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
 
 // measureTls measures TLS handshake time over the configured number of runs
 func (c *CloudflareSpeedtest) measureTls() *model.TlsSummary {
-	runs := c.config.DiagnosticRuns
+	runs := c.config.TlsRuns
 
 	var samples []float64
 	var protocol, cipher string

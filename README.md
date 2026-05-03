@@ -78,7 +78,7 @@ DNS metrics do not carry the common labels.
 - `hostname`: the hostname being resolved (configurable via `DNS_HOSTNAME`)
 - `dns_server`: comma-separated list of DNS servers used
 
-**Note**: Histogram metric. Each test run contributes `DIAGNOSTIC_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
+**Note**: Histogram metric. Each test run contributes `DNS_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### TLS Metrics
 
@@ -91,7 +91,7 @@ TLS metrics do not carry the common labels.
 - `protocol`: TLS protocol version negotiated (e.g. `TLSv1.3`)
 - `cipher_suite`: cipher suite negotiated (e.g. `TLS_AES_128_GCM_SHA256`)
 
-**Note**: Histogram metric. Each test run contributes `DIAGNOSTIC_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
+**Note**: Histogram metric. Each test run contributes `TLS_RUNS` observations (default 10). Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Network Information Metrics
 
@@ -157,9 +157,11 @@ All configuration is done via environment variables:
 | `TEST_INTERVAL_MS`  | 3600000 (1 hour)             | Interval between tests in milliseconds |
 | `PROBE_INTERVAL_MS` | 250                          | Interval between latency probes        |
 | `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
-| `SKIP_DIAGNOSTICS`  | false                        | Skip DNS and TLS diagnostics           |
 | `DNS_HOSTNAME`      | hostname from `BASE_URL`     | Hostname to resolve in DNS tests       |
-| `DIAGNOSTIC_RUNS`   | 10                           | Number of runs for DNS and TLS tests   |
+| `DNS_RUNS`          | 10                           | Number of DNS resolution runs per test |
+| `SKIP_DNS`          | false                        | Skip DNS diagnostics                   |
+| `TLS_RUNS`          | 10                           | Number of TLS handshake runs per test  |
+| `SKIP_TLS`          | false                        | Skip TLS diagnostics                   |
 | `ASN`               | -                            | Override ASN                           |
 | `AS_ORG`            | -                            | Override AS organization               |
 | `INTERFACE_NAME`    | -                            | Override interface name                |

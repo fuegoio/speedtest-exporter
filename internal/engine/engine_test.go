@@ -77,6 +77,8 @@ func newTestEngine(baseURL string) *CloudflareSpeedtest {
 	cfg := config.ExporterConfig{
 		BaseURL:        baseURL,
 		ProbeTimeoutMs: 5 * time.Second,
+		DnsRuns:        10,
+		TlsRuns:        10,
 	}
 	return NewCloudflareSpeedtest(cfg)
 }
@@ -653,6 +655,7 @@ func TestMeasureTls(t *testing.T) {
 		BaseURL:        srv.URL,
 		ProbeTimeoutMs: 5 * time.Second,
 		TLSSkipVerify:  true,
+		TlsRuns:        10,
 	}
 	engine := NewCloudflareSpeedtest(cfg)
 
@@ -744,7 +747,8 @@ func TestSpeedtestIntegration(t *testing.T) {
 		Concurrency:     4,
 		ProbeTimeoutMs:  10 * time.Second,
 		ProbeIntervalMs: 100 * time.Millisecond,
-		SkipDiagnostics: true,
+		SkipDns:         true,
+		SkipTls:         true,
 	}
 
 	st := NewCloudflareSpeedtest(cfg)
