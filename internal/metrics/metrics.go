@@ -11,113 +11,71 @@ import (
 	"github.com/fuegoio/speedtest-exporter/internal/model"
 )
 
+// Histogram buckets for latency metrics (in milliseconds)
+var latencyBuckets = []float64{
+	0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 5000,
+}
+
+// Histogram buckets for throughput metrics (in Mbps)
+var throughputBuckets = []float64{
+	0.01, 0.1, 1, 5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000,
+}
+
+// Histogram buckets for duration metrics (in milliseconds)
+var durationBuckets = []float64{
+	1, 5, 10, 50, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 15000, 20000, 30000,
+}
+
 // Metrics holds all Prometheus metrics
 var (
-	// Download metrics
-	DownloadMbps = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_download_mbps",
-			Help: "Current download speed in Mbps",
+	// Download histogram (replaces DownloadMbps gauge)
+	DownloadMbps = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_download_mbps",
+			Help:    "Download speed in Mbps (histogram)",
+			Buckets: throughputBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
-	DownloadBytesTotal = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_download_bytes_total",
-			Help: "Total bytes downloaded in the last test",
-		},
-		[]string{"server", "colo", "asn", "as_org", "size"},
-	)
-
-	DownloadDurationMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_download_duration_ms",
-			Help: "Duration of download test in milliseconds",
-		},
-		[]string{"server", "colo", "size"},
-	)
-
-	// Upload metrics
-	UploadMbps = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_upload_mbps",
-			Help: "Current upload speed in Mbps",
+	// Download duration as histogram
+	DownloadDurationMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_download_duration_ms",
+			Help:    "Duration of download test in milliseconds",
+			Buckets: durationBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
-	UploadBytesTotal = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_upload_bytes_total",
-			Help: "Total bytes uploaded in the last test",
+	// Upload histogram (replaces UploadMbps gauge)
+	UploadMbps = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_upload_mbps",
+			Help:    "Upload speed in Mbps (histogram)",
+			Buckets: throughputBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
-	UploadDurationMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_upload_duration_ms",
-			Help: "Duration of upload test in milliseconds",
+	// Upload duration as histogram
+	UploadDurationMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_upload_duration_ms",
+			Help:    "Duration of upload test in milliseconds",
+			Buckets: durationBuckets,
 		},
-		[]string{"server", "colo", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
-	// Idle latency metrics
-	IdleLatencyMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_ms",
-			Help: "Idle latency in milliseconds",
+	// Idle latency histogram
+	IdleLatencyMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_idle_latency_ms",
+			Help:    "Idle latency in milliseconds",
+			Buckets: latencyBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
-	)
-
-	IdleLatencyMinMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_min_ms",
-			Help: "Minimum idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	IdleLatencyMeanMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_mean_ms",
-			Help: "Mean idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	IdleLatencyMedianMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_median_ms",
-			Help: "Median idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	IdleLatencyP25Ms = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_p25_ms",
-			Help: "25th percentile idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	IdleLatencyP75Ms = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_p75_ms",
-			Help: "75th percentile idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	IdleLatencyMaxMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_idle_latency_max_ms",
-			Help: "Maximum idle latency in milliseconds",
-		},
-		[]string{"server", "colo"},
 	)
 
 	IdleLatencyJitterMs = prometheus.NewGaugeVec(
@@ -125,89 +83,27 @@ var (
 			Name: "speedtest_idle_latency_jitter_ms",
 			Help: "Idle latency jitter in milliseconds",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
 	)
 
-	// Loaded latency (download) metrics
-	LoadedLatencyDownloadMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_download_ms",
-			Help: "Loaded latency during download in milliseconds",
+	// Loaded latency (download) histogram
+	LoadedLatencyDownloadMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_loaded_latency_download_ms",
+			Help:    "Loaded latency during download in milliseconds",
+			Buckets: latencyBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
 	)
 
-	LoadedLatencyDownloadMinMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_download_min_ms",
-			Help: "Minimum loaded latency during download in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyDownloadMeanMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_download_mean_ms",
-			Help: "Mean loaded latency during download in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyDownloadMedianMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_download_median_ms",
-			Help: "Median loaded latency during download in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyDownloadMaxMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_download_max_ms",
-			Help: "Maximum loaded latency during download in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	// Loaded latency (upload) metrics
-	LoadedLatencyUploadMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_upload_ms",
-			Help: "Loaded latency during upload in milliseconds",
+	// Loaded latency (upload) histogram
+	LoadedLatencyUploadMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_loaded_latency_upload_ms",
+			Help:    "Loaded latency during upload in milliseconds",
+			Buckets: latencyBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
-	)
-
-	LoadedLatencyUploadMinMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_upload_min_ms",
-			Help: "Minimum loaded latency during upload in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyUploadMeanMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_upload_mean_ms",
-			Help: "Mean loaded latency during upload in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyUploadMedianMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_upload_median_ms",
-			Help: "Median loaded latency during upload in milliseconds",
-		},
-		[]string{"server", "colo"},
-	)
-
-	LoadedLatencyUploadMaxMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_loaded_latency_upload_max_ms",
-			Help: "Maximum loaded latency during upload in milliseconds",
-		},
-		[]string{"server", "colo"},
 	)
 
 	// Packet loss metrics
@@ -216,7 +112,7 @@ var (
 			Name: "speedtest_idle_latency_loss_percent",
 			Help: "Packet loss percentage during idle latency test",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
 	)
 
 	LoadedLatencyDownloadLossPercent = prometheus.NewGaugeVec(
@@ -224,7 +120,7 @@ var (
 			Name: "speedtest_loaded_latency_download_loss_percent",
 			Help: "Packet loss percentage during download test",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
 	)
 
 	LoadedLatencyUploadLossPercent = prometheus.NewGaugeVec(
@@ -232,7 +128,7 @@ var (
 			Name: "speedtest_loaded_latency_upload_loss_percent",
 			Help: "Packet loss percentage during upload test",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
 	)
 
 	// DNS metrics
@@ -333,20 +229,16 @@ var (
 		},
 		[]string{"status"},
 	)
-
 )
 
 // RegisterAll registers all metrics with the given registry
 func RegisterAll(reg prometheus.Registerer) error {
 	collectors := []prometheus.Collector{
-		DownloadMbps, DownloadBytesTotal, DownloadDurationMs,
-		UploadMbps, UploadBytesTotal, UploadDurationMs,
-		IdleLatencyMs, IdleLatencyMinMs, IdleLatencyMeanMs, IdleLatencyMedianMs,
-		IdleLatencyP25Ms, IdleLatencyP75Ms, IdleLatencyMaxMs, IdleLatencyJitterMs,
-		LoadedLatencyDownloadMs, LoadedLatencyDownloadMinMs, LoadedLatencyDownloadMeanMs,
-		LoadedLatencyDownloadMedianMs, LoadedLatencyDownloadMaxMs,
-		LoadedLatencyUploadMs, LoadedLatencyUploadMinMs, LoadedLatencyUploadMeanMs,
-		LoadedLatencyUploadMedianMs, LoadedLatencyUploadMaxMs,
+		DownloadMbps, DownloadDurationMs,
+		UploadMbps, UploadDurationMs,
+		IdleLatencyMs, IdleLatencyJitterMs,
+		LoadedLatencyDownloadMs,
+		LoadedLatencyUploadMs,
 		IdleLatencyLossPercent, LoadedLatencyDownloadLossPercent, LoadedLatencyUploadLossPercent,
 		DnsResolutionTimeMs, DnsIpv4Count, DnsIpv6Count,
 		TlsHandshakeTimeMs,
@@ -371,12 +263,12 @@ func Handler() http.Handler {
 // UpdateMetrics updates all Prometheus metrics from a RunResult
 func UpdateMetrics(result *model.RunResult) {
 	labels := map[string]string{
-		"server":    derefString(result.Server, "unknown"),
-		"colo":     derefString(result.Colo, "unknown"),
-		"asn":      derefString(result.Asn, "unknown"),
-		"as_org":   derefString(result.AsOrg, "unknown"),
-		"interface": derefString(result.InterfaceName, "unknown"),
-		"network":  derefString(result.NetworkName, "unknown"),
+		"server":     derefString(result.Server, "unknown"),
+		"colo":       derefString(result.Colo, "unknown"),
+		"asn":        derefString(result.Asn, "unknown"),
+		"as_org":     derefString(result.AsOrg, "unknown"),
+		"interface":  derefString(result.InterfaceName, "unknown"),
+		"network":    derefString(result.NetworkName, "unknown"),
 		"ip_version": getIPVersion(result),
 	}
 
@@ -390,92 +282,32 @@ func UpdateMetrics(result *model.RunResult) {
 	totalDuration := result.Download.DurationMs + result.Upload.DurationMs
 	TestDurationTotalMs.Set(float64(totalDuration))
 
-	// Download metrics (with size label - use "total" for overall)
-	DownloadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Set(result.Download.Mbps)
-	DownloadBytesTotal.WithLabelValues(
-		labels["server"], labels["colo"], labels["asn"], labels["as_org"], "total",
-	).Set(float64(result.Download.Bytes))
-	DownloadDurationMs.WithLabelValues(
-		labels["server"], labels["colo"], "total",
-	).Set(float64(result.Download.DurationMs))
+	// Download metrics (histogram)
+	DownloadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(result.Download.Mbps)
+	DownloadDurationMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(float64(result.Download.DurationMs))
 
-	// Upload metrics (with size label - use "total" for overall)
-	UploadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Set(result.Upload.Mbps)
-	UploadBytesTotal.WithLabelValues(
-		labels["server"], labels["colo"], labels["asn"], labels["as_org"], "total",
-	).Set(float64(result.Upload.Bytes))
-	UploadDurationMs.WithLabelValues(
-		labels["server"], labels["colo"], "total",
-	).Set(float64(result.Upload.DurationMs))
+	// Upload metrics (histogram)
+	UploadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(result.Upload.Mbps)
+	UploadDurationMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(float64(result.Upload.DurationMs))
 
-	// Idle latency metrics
+	// Idle latency metrics (histogram)
 	idleLabels := labels
 	idleLabels["type"] = "idle"
-	IdleLatencyMs.With(idleLabels).Set(derefFloat64(result.IdleLatency.MedianMs, 0))
-	IdleLatencyMinMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.MinMs, 0))
-	IdleLatencyMeanMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.MeanMs, 0))
-	IdleLatencyMedianMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.MedianMs, 0))
-	IdleLatencyP25Ms.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.P25Ms, 0))
-	IdleLatencyP75Ms.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.P75Ms, 0))
-	IdleLatencyMaxMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.MaxMs, 0))
-	IdleLatencyJitterMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.IdleLatency.JitterMs, 0))
-	IdleLatencyLossPercent.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(result.IdleLatency.Loss * 100)
+	IdleLatencyMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "idle").Observe(derefFloat64(result.IdleLatency.MedianMs, 0))
+	IdleLatencyJitterMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(derefFloat64(result.IdleLatency.JitterMs, 0))
+	IdleLatencyLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.IdleLatency.Loss * 100)
 
-	// Loaded latency (download) metrics
+	// Loaded latency (download) metrics (histogram)
 	loadedLabels := labels
 	loadedLabels["type"] = "download"
-	LoadedLatencyDownloadMs.With(loadedLabels).Set(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
-	LoadedLatencyDownloadMinMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyDownload.MinMs, 0))
-	LoadedLatencyDownloadMeanMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyDownload.MeanMs, 0))
-	LoadedLatencyDownloadMedianMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
-	LoadedLatencyDownloadMaxMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyDownload.MaxMs, 0))
-	LoadedLatencyDownloadLossPercent.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(result.LoadedLatencyDownload.Loss * 100)
+	LoadedLatencyDownloadMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "download").Observe(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
+	LoadedLatencyDownloadLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.LoadedLatencyDownload.Loss * 100)
 
-	// Loaded latency (upload) metrics
+	// Loaded latency (upload) metrics (histogram)
 	loadedLabelsUpload := labels
 	loadedLabelsUpload["type"] = "upload"
-	LoadedLatencyUploadMs.With(loadedLabelsUpload).Set(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
-	LoadedLatencyUploadMinMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyUpload.MinMs, 0))
-	LoadedLatencyUploadMeanMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyUpload.MeanMs, 0))
-	LoadedLatencyUploadMedianMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
-	LoadedLatencyUploadMaxMs.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(derefFloat64(result.LoadedLatencyUpload.MaxMs, 0))
-	LoadedLatencyUploadLossPercent.WithLabelValues(
-		labels["server"], labels["colo"],
-	).Set(result.LoadedLatencyUpload.Loss * 100)
+	LoadedLatencyUploadMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "upload").Observe(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
+	LoadedLatencyUploadLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.LoadedLatencyUpload.Loss * 100)
 
 	// DNS metrics
 	if result.Dns != nil {

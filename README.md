@@ -19,38 +19,40 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 | Metric                           | Labels                                                    | Description                               |
 | -------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| `speedtest_download_mbps`        | server, colo, asn, as_org, interface, network, ip_version | Current download speed in Mbps            |
-| `speedtest_download_bytes_total` | server, colo, asn, as_org                                 | Total bytes downloaded in last test       |
-| `speedtest_download_duration_ms` | server, colo                                              | Duration of download test in milliseconds |
+| `speedtest_download_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Download speed in Mbps (histogram) |
+| `speedtest_download_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of download test in milliseconds (histogram) |
+
+**Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Upload Metrics
 
 | Metric                         | Labels                                                    | Description                             |
 | ------------------------------ | --------------------------------------------------------- | --------------------------------------- |
-| `speedtest_upload_mbps`        | server, colo, asn, as_org, interface, network, ip_version | Current upload speed in Mbps            |
-| `speedtest_upload_bytes_total` | server, colo, asn, as_org                                 | Total bytes uploaded in last test       |
-| `speedtest_upload_duration_ms` | server, colo                                              | Duration of upload test in milliseconds |
+| `speedtest_upload_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Upload speed in Mbps (histogram) |
+| `speedtest_upload_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of upload test in milliseconds (histogram) |
+
+**Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Latency Metrics (Idle)
 
 | Metric                                | Labels                                                          | Description                                     |
 | ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| `speedtest_idle_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds                    |
-| `speedtest_idle_latency_min_ms`       | server, colo                                                    | Minimum idle latency                            |
-| `speedtest_idle_latency_mean_ms`      | server, colo                                                    | Mean idle latency                               |
-| `speedtest_idle_latency_median_ms`    | server, colo                                                    | Median idle latency                             |
-| `speedtest_idle_latency_p25_ms`       | server, colo                                                    | 25th percentile idle latency                    |
-| `speedtest_idle_latency_p75_ms`       | server, colo                                                    | 75th percentile idle latency                    |
-| `speedtest_idle_latency_max_ms`       | server, colo                                                    | Maximum idle latency                            |
-| `speedtest_idle_latency_jitter_ms`    | server, colo                                                    | Idle latency jitter                             |
-| `speedtest_idle_latency_loss_percent` | server, colo                                                    | Packet loss percentage during idle latency test |
+| `speedtest_idle_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds (histogram) |
+| `speedtest_idle_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version        | Idle latency jitter                             |
+| `speedtest_idle_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version        | Packet loss percentage during idle latency test |
+
+**Note**: `speedtest_idle_latency_ms` is a histogram metric. Percentiles (p50, p75, p90, p95, p99) are automatically available through Prometheus histogram functions.
 
 ### Loaded Latency Metrics (During Download/Upload)
 
-Similar metrics to idle latency but measured during download/upload tests:
+| Metric                                | Labels                                                          | Description                                     |
+| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| `speedtest_loaded_latency_download_ms` | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during download (histogram) |
+| `speedtest_loaded_latency_upload_ms`   | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during upload (histogram) |
+| `speedtest_loaded_latency_download_loss_percent` | server, colo, asn, as_org, interface, network, ip_version | Packet loss percentage during download test |
+| `speedtest_loaded_latency_upload_loss_percent` | server, colo, asn, as_org, interface, network, ip_version | Packet loss percentage during upload test |
 
-- `speedtest_loaded_latency_download_*`
-- `speedtest_loaded_latency_upload_*`
+**Note**: `speedtest_loaded_latency_download_ms` and `speedtest_loaded_latency_upload_ms` are histogram metrics. Percentiles are automatically available through Prometheus histogram functions.
 
 ### DNS Metrics
 
