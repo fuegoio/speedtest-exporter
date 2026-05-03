@@ -1,29 +1,32 @@
 # Syntax: docker/dockerfile:1.4
-FROM oven/bun:1-debian
+# Ultra-minimal image using scratch
+
+# Build stage: Compile with Bun on Alpine
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files first for better caching
 COPY package.json bun.lock ./
-
-# Install production dependencies only
 RUN bun install --production
-
-# Copy application code
 COPY src/ ./src/
 
-# Create non-root user
-RUN useradd -r appuser && chown -R appuser:appuser /app
+# Compile to a standalone executable
+RUN bun build --compile --outfile /app/speedtest-exporter src/index.ts
 
-# Switch to non-root user
-USER appuser
+# Final stage: Scratch with only the binary and required libraries
+FROM scratch
 
-# Expose port
+# Copy the compiled binary
+COPY --from=builder /app/speedtest-exporter /speedtest-exporter
+
+# Copy required musl libc libraries from Alpine (create dirs during copy)
+COPY --from=builder /lib/ld-musl-aarch64.so.1 /lib/
+COPY --from=builder /usr/lib/libstdc++.so.6 /usr/lib/
+COPY --from=builder /usr/lib/libgcc_s.so.1 /usr/lib/
+
+# Create non-root user (uid 1000)
+USER 1000
+
 EXPOSE 9537
 
-# Health check - curl the HTTP endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:9537/health || exit 1
-
-# Run with Bun
-CMD ["bun", "run", "src/index.ts"]
+ENTRYPOINT ["/speedtest-exporter"]
