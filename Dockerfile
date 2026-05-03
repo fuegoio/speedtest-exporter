@@ -35,10 +35,12 @@ RUN chmod +x /app/speedtest-exporter
 
 # Create non-root user for security
 RUN adduser -D appuser
-USER appuser
 
-# Ensure binary has correct permissions
+# Ensure binary has correct permissions (run as root before switching user)
 RUN chown appuser:appuser /app/speedtest-exporter
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 9537
