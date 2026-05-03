@@ -1,8 +1,5 @@
 # Syntax: docker/dockerfile:1.4
-# Lightweight build for speedtest-exporter using Bun compile
-
-# Build stage: Compile with Bun
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1-debian
 
 WORKDIR /app
 
@@ -15,26 +12,8 @@ RUN bun install --production
 # Copy application code
 COPY src/ ./src/
 
-# Compile the application to a standalone executable
-# --compile bundles the Bun runtime and all dependencies into a single binary
-RUN bun build --compile --outfile /app/dist/index src/index.ts
-
-# Final stage: Minimal runtime image with glibc
-FROM debian:stable-slim
-
-# Install only curl for health check
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy the compiled standalone executable from builder stage
-COPY --from=builder /app/dist/index /app/speedtest-exporter
-
-# Make executable
-RUN chmod +x /app/speedtest-exporter
-
 # Create non-root user
-RUN useradd -r appuser && chown appuser:appuser /app/speedtest-exporter
+RUN useradd -r appuser && chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
@@ -46,5 +25,5 @@ EXPOSE 9537
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:9537/health || exit 1
 
-# Run the compiled standalone binary
-ENTRYPOINT ["/app/speedtest-exporter"]
+# Run with Bun
+CMD ["bun", "run", "src/index.ts"]
