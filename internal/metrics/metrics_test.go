@@ -1,6 +1,10 @@
 package metrics
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -545,6 +549,66 @@ func TestIncrementRun(t *testing.T) {
 	}
 	if total != 2 {
 		t.Errorf("total runs = %v, want 2", total)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Handler — registry wiring
+// ---------------------------------------------------------------------------
+
+// TestHandlerServesCustomRegistry is the regression test for the bug where
+// RegisterAll registered metrics into a custom registry but Handler() served
+// the default (empty) registry, resulting in no metrics being exposed.
+func TestHandlerServesCustomRegistry(t *testing.T) {
+	reg := freshMetrics(t)
+	UpdateMetrics(buildResult())
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	Handler(reg).ServeHTTP(rec, req)
+
+	resp := rec.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	bodyStr := string(body)
+
+	for _, metric := range []string{
+		"speedtest_download_mbps",
+		"speedtest_upload_mbps",
+		"speedtest_idle_latency_ms",
+		"speedtest_test_runs_total",
+		"speedtest_test_timestamp",
+	} {
+		if !strings.Contains(bodyStr, metric) {
+			t.Errorf("metric %q not found in /metrics output", metric)
+		}
+	}
+}
+
+// TestHandlerDefaultRegistryIsEmpty verifies that the default Prometheus
+// registry does not contain our custom metrics — confirming they only live
+// in the registry passed to RegisterAll.
+func TestHandlerDefaultRegistryIsEmpty(t *testing.T) {
+	freshMetrics(t)
+	UpdateMetrics(buildResult())
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	// Use the default registry handler (the old broken behaviour)
+	http.DefaultServeMux.ServeHTTP(rec, req)
+
+	// Default registry won't have our metrics; use prometheus.DefaultGatherer directly
+	mfs, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		t.Fatalf("DefaultGatherer.Gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if strings.HasPrefix(mf.GetName(), "speedtest_") {
+			t.Errorf("found speedtest metric %q in default registry — metrics leaked", mf.GetName())
+		}
 	}
 }
 

@@ -230,9 +230,9 @@ func RegisterAll(reg prometheus.Registerer) error {
 	return nil
 }
 
-// Handler returns the HTTP handler for the metrics endpoint
-func Handler() http.Handler {
-	return promhttp.Handler()
+// Handler returns the HTTP handler for the metrics endpoint using the given registry
+func Handler(reg prometheus.Gatherer) http.Handler {
+	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 }
 
 // UpdateMetrics updates all Prometheus metrics from a RunResult

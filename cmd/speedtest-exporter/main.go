@@ -55,7 +55,7 @@ func (e *SpeedtestExporter) Start() error {
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", metrics.Handler())
+	mux.Handle("/metrics", metrics.Handler(reg))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
