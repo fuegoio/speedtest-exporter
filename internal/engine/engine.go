@@ -166,17 +166,24 @@ func getLocalNetworkInfo() (localIpv4, localIpv6, interfaceName, networkName str
 	return
 }
 
-// fetchWithTimeout performs an HTTP request with a timeout
-func fetchWithTimeout(client *http.Client, url string, timeout time.Duration) (*http.Response, error) {
+// fetchWithTimeout performs an HTTP request with a timeout.
+// The caller is responsible for calling the returned cancel func after the response body is fully consumed.
+func fetchWithTimeout(client *http.Client, url string, timeout time.Duration) (*http.Response, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		cancel()
+		return nil, nil, err
 	}
 
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		cancel()
+		return nil, nil, err
+	}
+
+	return resp, cancel, nil
 }
 
 // metaResponse is the JSON response from https://speed.cloudflare.com/meta
@@ -198,10 +205,11 @@ type metaResponse struct {
 // getMetaInfo fetches network and geo info from https://speed.cloudflare.com/meta
 func getMetaInfo(baseURL string, client *http.Client) (externalIP, colo, asn, asOrg, country, city, region, postalCode, latitude, longitude string, err error) {
 	metaURL := baseURL + "/meta"
-	resp, err := fetchWithTimeout(client, metaURL, 5*time.Second)
+	resp, cancel, err := fetchWithTimeout(client, metaURL, 5*time.Second)
 	if err != nil {
 		return
 	}
+	defer cancel()
 	defer resp.Body.Close()
 
 	var meta metaResponse
@@ -524,12 +532,13 @@ func (c *CloudflareSpeedtest) measureLatency(url string, durationMs time.Duratio
 
 	for time.Now().Before(endTime) {
 		start := time.Now()
-		resp, err := fetchWithTimeout(c.client, url, c.config.ProbeTimeoutMs)
+		resp, cancel, err := fetchWithTimeout(c.client, url, c.config.ProbeTimeoutMs)
 		if err != nil {
 			samples = append(samples, -1) // Mark as loss
 		} else {
 			io.ReadAll(resp.Body)
 			resp.Body.Close()
+			cancel()
 			elapsed := float64(time.Since(start).Milliseconds())
 			samples = append(samples, elapsed)
 		}
@@ -550,14 +559,18 @@ func (c *CloudflareSpeedtest) measureLatency(url string, durationMs time.Duratio
 }
 
 // measureSingleFetch performs a single HTTP fetch and returns a ThroughputSummary.
+// For chunked responses (e.g. __down), timing starts after headers are received so
+// that connection setup and TTFB are excluded from the throughput calculation.
 func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSummary {
-	start := time.Now()
-	resp, err := fetchWithTimeout(c.client, url, 60*time.Second)
+	resp, cancel, err := fetchWithTimeout(c.client, url, 60*time.Second)
 	if err != nil {
 		return &model.ThroughputSummary{}
 	}
+	// Start timing after headers arrive — body transfer only.
+	start := time.Now()
 	data, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	cancel()
 	dur := time.Since(start)
 	elapsed := dur.Seconds()
 
@@ -578,12 +591,13 @@ func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSu
 func (c *CloudflareSpeedtest) measureThroughput(url string, duration time.Duration) {
 	endTime := time.Now().Add(duration)
 	for time.Now().Before(endTime) {
-		resp, err := fetchWithTimeout(c.client, url, duration)
+		resp, cancel, err := fetchWithTimeout(c.client, url, duration)
 		if err != nil {
 			continue
 		}
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
+		cancel()
 	}
 }
 
