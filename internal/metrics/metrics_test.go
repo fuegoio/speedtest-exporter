@@ -50,8 +50,8 @@ func freshMetrics(t *testing.T) *prometheus.Registry {
 		Name: "speedtest_dns_resolution_time_ms", Help: ".", Buckets: latencyBuckets,
 	}, []string{"hostname", "dns_server"})
 
-	TlsHandshakeTimeMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_tls_handshake_time_ms", Help: ".",
+	TlsHandshakeTimeMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "speedtest_tls_handshake_time_ms", Help: ".", Buckets: latencyBuckets,
 	}, []string{"protocol", "cipher_suite"})
 
 	LocalIpv4 = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -186,9 +186,10 @@ func buildResult() *model.RunResult {
 			DnsServers:            []string{"8.8.8.8"},
 		},
 		Tls: &model.TlsSummary{
-			HandshakeTimeMs: 45.0,
-			ProtocolVersion: &proto,
-			CipherSuite:     &cipher,
+			HandshakeTimeMs:      45.0,
+			HandshakeTimeSamples: []float64{40.0, 42.0, 44.0, 45.0, 46.0, 47.0, 43.0, 48.0, 45.0, 50.0},
+			ProtocolVersion:      &proto,
+			CipherSuite:          &cipher,
 		},
 	}
 }
@@ -383,8 +384,13 @@ func TestUpdateMetricsTls(t *testing.T) {
 	if mf == nil {
 		t.Fatal("speedtest_tls_handshake_time_ms not found")
 	}
-	if mf.GetMetric()[0].GetGauge().GetValue() != 45.0 {
-		t.Errorf("tls handshake = %v, want 45.0", mf.GetMetric()[0].GetGauge().GetValue())
+	h := mf.GetMetric()[0].GetHistogram()
+	if h.GetSampleCount() != 10 {
+		t.Errorf("tls sample count = %d, want 10", h.GetSampleCount())
+	}
+	// sum of samples: 40+42+44+45+46+47+43+48+45+50 = 450
+	if h.GetSampleSum() != 450.0 {
+		t.Errorf("tls handshake sum = %v, want 450.0", h.GetSampleSum())
 	}
 }
 

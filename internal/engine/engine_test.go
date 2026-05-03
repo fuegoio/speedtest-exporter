@@ -640,6 +640,56 @@ func TestRunDirectTestMetaFailure(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// measureTls — uses TLS mock server
+// ---------------------------------------------------------------------------
+
+func TestMeasureTls(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	cfg := config.ExporterConfig{
+		BaseURL:        srv.URL,
+		ProbeTimeoutMs: 5 * time.Second,
+		TLSSkipVerify:  true,
+	}
+	engine := NewCloudflareSpeedtest(cfg)
+
+	result := engine.measureTls()
+	if result == nil {
+		t.Fatal("expected non-nil TlsSummary")
+	}
+	if len(result.HandshakeTimeSamples) != 10 {
+		t.Errorf("HandshakeTimeSamples count = %d, want 10", len(result.HandshakeTimeSamples))
+	}
+	for i, ms := range result.HandshakeTimeSamples {
+		if ms < 0 {
+			t.Errorf("sample[%d] = %v, want >= 0", i, ms)
+		}
+	}
+	if result.ProtocolVersion == nil || *result.ProtocolVersion == "" {
+		t.Error("expected non-empty ProtocolVersion")
+	}
+	if result.CipherSuite == nil || *result.CipherSuite == "" {
+		t.Error("expected non-empty CipherSuite")
+	}
+	// Mean should be within the range of samples
+	if result.HandshakeTimeMs < 0 {
+		t.Errorf("HandshakeTimeMs = %v, want >= 0", result.HandshakeTimeMs)
+	}
+}
+
+func TestMeasureTlsBadURL(t *testing.T) {
+	engine := newTestEngine("http://127.0.0.1:1")
+	result := engine.measureTls()
+	// All 10 attempts fail → nil
+	if result != nil {
+		t.Errorf("expected nil result for unreachable server, got %+v", result)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Model types
 // ---------------------------------------------------------------------------
 

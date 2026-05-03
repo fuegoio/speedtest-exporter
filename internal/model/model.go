@@ -32,9 +32,10 @@ type DnsSummary struct {
 
 // TlsSummary contains TLS handshake statistics
 type TlsSummary struct {
-	HandshakeTimeMs float64 `json:"handshake_time_ms"`
-	ProtocolVersion *string `json:"protocol_version,omitempty"`
-	CipherSuite     *string `json:"cipher_suite,omitempty"`
+	HandshakeTimeMs        float64   `json:"handshake_time_ms"`
+	HandshakeTimeSamples   []float64 `json:"handshake_time_samples"`
+	ProtocolVersion        *string   `json:"protocol_version,omitempty"`
+	CipherSuite            *string   `json:"cipher_suite,omitempty"`
 }
 
 // RunResult contains the complete test result

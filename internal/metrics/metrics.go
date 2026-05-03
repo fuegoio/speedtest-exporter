@@ -81,10 +81,11 @@ var (
 	)
 
 	// TLS metrics
-	TlsHandshakeTimeMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_tls_handshake_time_ms",
-			Help: "TLS handshake time in milliseconds",
+	TlsHandshakeTimeMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_tls_handshake_time_ms",
+			Help:    "TLS handshake time in milliseconds (histogram over 10 runs)",
+			Buckets: latencyBuckets,
 		},
 		[]string{"protocol", "cipher_suite"},
 	)
@@ -243,10 +244,13 @@ func UpdateMetrics(result *model.RunResult) {
 
 	// TLS metrics
 	if result.Tls != nil {
-		TlsHandshakeTimeMs.WithLabelValues(
+		tlsLabels := []string{
 			derefString(result.Tls.ProtocolVersion, "unknown"),
 			derefString(result.Tls.CipherSuite, "unknown"),
-		).Set(result.Tls.HandshakeTimeMs)
+		}
+		for _, ms := range result.Tls.HandshakeTimeSamples {
+			TlsHandshakeTimeMs.WithLabelValues(tlsLabels...).Observe(ms)
+		}
 	}
 
 	// Network information

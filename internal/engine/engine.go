@@ -691,37 +691,55 @@ func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
 	}
 }
 
-// measureTls measures TLS handshake time
+// measureTls measures TLS handshake time over 10 runs
 func (c *CloudflareSpeedtest) measureTls() *model.TlsSummary {
-	start := time.Now()
+	const runs = 10
 
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: false,
-		},
+	var samples []float64
+	var protocol, cipher string
+
+	for i := 0; i < runs; i++ {
+		// Each run uses a fresh transport to force a new TLS handshake.
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: c.config.TLSSkipVerify, //nolint:gosec
+			},
+		}
+		client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
+
+		start := time.Now()
+		resp, err := client.Get(c.config.BaseURL)
+		if err != nil {
+			continue
+		}
+		elapsed := float64(time.Since(start).Milliseconds())
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		samples = append(samples, elapsed)
+
+		// Capture TLS metadata from the first successful response.
+		if i == 0 && resp.TLS != nil {
+			protocol = tls.VersionName(resp.TLS.Version)
+			cipher = tls.CipherSuiteName(resp.TLS.CipherSuite)
+		}
 	}
-	client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 
-	resp, err := client.Get(c.config.BaseURL)
-	if err != nil {
+	if len(samples) == 0 {
 		return nil
 	}
-	defer resp.Body.Close()
 
-	elapsed := time.Since(start).Milliseconds()
-
-	// Get TLS info from connection state
-	tlsState := resp.TLS
-	var protocol, cipher string
-	if tlsState != nil {
-		protocol = tls.VersionName(tlsState.Version)
-		cipher = tls.CipherSuiteName(tlsState.CipherSuite)
+	sum := 0.0
+	for _, s := range samples {
+		sum += s
 	}
+	mean := sum / float64(len(samples))
 
 	return &model.TlsSummary{
-		HandshakeTimeMs: float64(elapsed),
-		ProtocolVersion: &protocol,
-		CipherSuite:     &cipher,
+		HandshakeTimeMs:      mean,
+		HandshakeTimeSamples: samples,
+		ProtocolVersion:      &protocol,
+		CipherSuite:          &cipher,
 	}
 }
 

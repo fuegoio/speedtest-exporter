@@ -55,9 +55,11 @@ The `during` label is `idle`, `download`, or `upload`.
 
 ### TLS Metrics
 
-| Metric                            | Labels                 | Description                        |
-| --------------------------------- | ---------------------- | ---------------------------------- |
-| `speedtest_tls_handshake_time_ms` | protocol, cipher_suite | TLS handshake time in milliseconds |
+| Metric                            | Labels                 | Description                                                  |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| `speedtest_tls_handshake_time_ms` | protocol, cipher_suite | TLS handshake time in milliseconds (histogram over 10 runs)  |
+
+**Note**: `speedtest_tls_handshake_time_ms` is a histogram. Each test run contributes 10 observations (one per handshake). Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Network Information Metrics
 

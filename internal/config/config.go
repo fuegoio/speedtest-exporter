@@ -23,6 +23,7 @@ type ExporterConfig struct {
 
 	// Feature flags
 	SkipDiagnostics bool
+	TLSSkipVerify   bool // skip TLS certificate verification (for testing only)
 
 	// Network information overrides
 	Asn           *string
