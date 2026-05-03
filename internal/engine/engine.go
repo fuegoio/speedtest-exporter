@@ -300,7 +300,12 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 				url = fmt.Sprintf("%s/__up?bytes=%d", c.config.BaseURL, test.size)
 			}
 
-			result := c.measureSingleFetch(url)
+			var result *model.ThroughputSummary
+			if testType == "download" {
+				result = c.measureSingleFetch(url)
+			} else {
+				result = c.measureSingleUpload(url, test.size)
+			}
 
 			// Update metrics for this specific test
 			if testType == "download" {
@@ -357,7 +362,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyUpload(baseURL, server, colo s
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.measureThroughput(uploadURL, durationMs)
+		c.measureUploadThroughput(uploadURL, 100*1024, durationMs)
 	}()
 
 	// Run latency tests
@@ -587,6 +592,42 @@ func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSu
 	}
 }
 
+// measureSingleUpload POSTs size bytes to url and returns a ThroughputSummary.
+// Timing covers the full request (outbound transfer is what we measure).
+func (c *CloudflareSpeedtest) measureSingleUpload(url string, size int64) *model.ThroughputSummary {
+	body := io.LimitReader(rand.Reader, size)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
+	if err != nil {
+		return &model.ThroughputSummary{}
+	}
+	req.ContentLength = size
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	start := time.Now()
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return &model.ThroughputSummary{}
+	}
+	io.ReadAll(resp.Body)
+	resp.Body.Close()
+	dur := time.Since(start)
+
+	mbps := 0.0
+	if elapsed := dur.Seconds(); elapsed > 0 {
+		mbps = (float64(size) * 8) / (elapsed * 1_000_000)
+	}
+
+	return &model.ThroughputSummary{
+		Bytes:      size,
+		DurationMs: dur.Milliseconds(),
+		Mbps:       mbps,
+	}
+}
+
 // measureThroughput fetches url in a loop for the given duration (used for loaded latency background load).
 func (c *CloudflareSpeedtest) measureThroughput(url string, duration time.Duration) {
 	endTime := time.Now().Add(duration)
@@ -598,6 +639,14 @@ func (c *CloudflareSpeedtest) measureThroughput(url string, duration time.Durati
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
 		cancel()
+	}
+}
+
+// measureUploadThroughput POSTs size bytes in a loop for the given duration (used for loaded latency background load).
+func (c *CloudflareSpeedtest) measureUploadThroughput(url string, size int64, duration time.Duration) {
+	endTime := time.Now().Add(duration)
+	for time.Now().Before(endTime) {
+		c.measureSingleUpload(url, size)
 	}
 }
 
