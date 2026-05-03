@@ -23,8 +23,8 @@ type ExporterConfig struct {
 	ProbeTimeoutMs  time.Duration
 
 	// Diagnostics configuration
-	DnsHostname     string
-	DiagnosticRuns  int
+	DnsHostname    string
+	DiagnosticRuns int
 
 	// Feature flags
 	SkipDiagnostics bool
