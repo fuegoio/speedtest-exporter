@@ -297,10 +297,8 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 			// Update metrics for this specific test
 			if testType == "download" {
 				metrics.DownloadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(result.Mbps)
-				metrics.DownloadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(float64(result.DurationMs))
 			} else {
 				metrics.UploadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(result.Mbps)
-				metrics.UploadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(float64(result.DurationMs))
 			}
 
 			log.Printf("[Speedtest] %s %s: %.2f Mbps (%d bytes in %v)",

@@ -21,11 +21,6 @@ var throughputBuckets = []float64{
 	0.01, 0.1, 1, 5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000,
 }
 
-// Histogram buckets for duration metrics (in milliseconds)
-var durationBuckets = []float64{
-	1, 5, 10, 50, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 15000, 20000, 30000,
-}
-
 // Metrics holds all Prometheus metrics
 var (
 	// Download histogram (replaces DownloadMbps gauge)
@@ -38,32 +33,12 @@ var (
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
 
-	// Download duration as histogram
-	DownloadDurationMs = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "speedtest_download_duration_ms",
-			Help:    "Duration of download test in milliseconds",
-			Buckets: durationBuckets,
-		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
-	)
-
 	// Upload histogram (replaces UploadMbps gauge)
 	UploadMbps = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "speedtest_upload_mbps",
 			Help:    "Upload speed in Mbps (histogram)",
 			Buckets: throughputBuckets,
-		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
-	)
-
-	// Upload duration as histogram
-	UploadDurationMs = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "speedtest_upload_duration_ms",
-			Help:    "Duration of upload test in milliseconds",
-			Buckets: durationBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
@@ -234,8 +209,8 @@ var (
 // RegisterAll registers all metrics with the given registry
 func RegisterAll(reg prometheus.Registerer) error {
 	collectors := []prometheus.Collector{
-		DownloadMbps, DownloadDurationMs,
-		UploadMbps, UploadDurationMs,
+		DownloadMbps,
+		UploadMbps,
 		IdleLatencyMs, IdleLatencyJitterMs,
 		LoadedLatencyDownloadMs,
 		LoadedLatencyUploadMs,
@@ -294,11 +269,8 @@ func UpdateMetrics(result *model.RunResult) {
 
 	// Download metrics (histogram)
 	DownloadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Download.Mbps)
-	DownloadDurationMs.WithLabelValues(append(baseGeo, "total")...).Observe(float64(result.Download.DurationMs))
-
 	// Upload metrics (histogram)
 	UploadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Upload.Mbps)
-	UploadDurationMs.WithLabelValues(append(baseGeo, "total")...).Observe(float64(result.Upload.DurationMs))
 
 	// Idle latency metrics (histogram)
 	IdleLatencyMs.WithLabelValues(append(baseGeo, "idle")...).Observe(derefFloat64(result.IdleLatency.MedianMs, 0))

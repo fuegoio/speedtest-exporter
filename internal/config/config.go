@@ -15,9 +15,7 @@ type ExporterConfig struct {
 	// Test timing configuration
 	TestIntervalMs        time.Duration
 	BaseURL              string
-	DownloadDurationMs   time.Duration
-	UploadDurationMs     time.Duration
-	IdleLatencyDurationMs time.Duration
+	Concurrency          int
 
 	// Probe configuration
 	ProbeIntervalMs time.Duration
@@ -44,9 +42,7 @@ func LoadConfig() ExporterConfig {
 		Port:               getIntEnv("PORT", 9537),
 		TestIntervalMs:     getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
 		BaseURL:            getStringEnv("BASE_URL", "https://speed.cloudflare.com"),
-		DownloadDurationMs: getDurationEnv("DOWNLOAD_DURATION_MS", 10*time.Second),
-		UploadDurationMs:   getDurationEnv("UPLOAD_DURATION_MS", 10*time.Second),
-		IdleLatencyDurationMs: getDurationEnv("IDLE_LATENCY_DURATION_MS", 2*time.Second),
+		Concurrency:        getIntEnv("CONCURRENCY", 6),
 		ProbeIntervalMs:    getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
 		ProbeTimeoutMs:     getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
 		SkipDiagnostics:    getBoolEnv("SKIP_DIAGNOSTICS", false),

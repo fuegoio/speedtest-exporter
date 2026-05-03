@@ -213,9 +213,6 @@ func TestSpeedtestIntegration(t *testing.T) {
 
 	cfg := config.ExporterConfig{
 		BaseURL:               "https://speed.cloudflare.com",
-		DownloadDurationMs:    5 * time.Second,  // 5 seconds
-		UploadDurationMs:      5 * time.Second,  // 5 seconds
-		IdleLatencyDurationMs: 2 * time.Second,  // 2 seconds
 		Concurrency:           4,                // 4 concurrent connections
 		DownloadBytesPerReq:   1000000,           // 1MB per download request
 		UploadBytesPerReq:     100000,            // 100KB per upload request

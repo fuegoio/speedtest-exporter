@@ -17,18 +17,18 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 ### Download Metrics
 
-| Metric                           | Labels                                                    | Description                               |
-| -------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| `speedtest_download_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Download speed in Mbps (histogram) |
+| Metric                           | Labels                                                          | Description                                           |
+| -------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
+| `speedtest_download_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Download speed in Mbps (histogram)                    |
 | `speedtest_download_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of download test in milliseconds (histogram) |
 
 **Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Upload Metrics
 
-| Metric                         | Labels                                                    | Description                             |
-| ------------------------------ | --------------------------------------------------------- | --------------------------------------- |
-| `speedtest_upload_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Upload speed in Mbps (histogram) |
+| Metric                         | Labels                                                          | Description                                         |
+| ------------------------------ | --------------------------------------------------------------- | --------------------------------------------------- |
+| `speedtest_upload_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Upload speed in Mbps (histogram)                    |
 | `speedtest_upload_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of upload test in milliseconds (histogram) |
 
 **Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
@@ -37,20 +37,20 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 | Metric                                | Labels                                                          | Description                                     |
 | ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| `speedtest_idle_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds (histogram) |
-| `speedtest_idle_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version        | Idle latency jitter                             |
-| `speedtest_idle_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version        | Packet loss percentage during idle latency test |
+| `speedtest_idle_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds (histogram)        |
+| `speedtest_idle_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version       | Idle latency jitter                             |
+| `speedtest_idle_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during idle latency test |
 
 **Note**: `speedtest_idle_latency_ms` is a histogram metric. Percentiles (p50, p75, p90, p95, p99) are automatically available through Prometheus histogram functions.
 
 ### Loaded Latency Metrics (During Download/Upload)
 
-| Metric                                | Labels                                                          | Description                                     |
-| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| `speedtest_loaded_latency_download_ms` | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during download (histogram) |
-| `speedtest_loaded_latency_upload_ms`   | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during upload (histogram) |
-| `speedtest_loaded_latency_download_loss_percent` | server, colo, asn, as_org, interface, network, ip_version | Packet loss percentage during download test |
-| `speedtest_loaded_latency_upload_loss_percent` | server, colo, asn, as_org, interface, network, ip_version | Packet loss percentage during upload test |
+| Metric                                           | Labels                                                          | Description                                 |
+| ------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------- |
+| `speedtest_loaded_latency_download_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during download (histogram)  |
+| `speedtest_loaded_latency_upload_ms`             | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during upload (histogram)    |
+| `speedtest_loaded_latency_download_loss_percent` | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during download test |
+| `speedtest_loaded_latency_upload_loss_percent`   | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during upload test   |
 
 **Note**: `speedtest_loaded_latency_download_ms` and `speedtest_loaded_latency_upload_ms` are histogram metrics. Percentiles are automatically available through Prometheus histogram functions.
 
@@ -123,37 +123,29 @@ go install ./cmd/speedtest-exporter/
 
 All configuration is done via environment variables:
 
-| Variable                   | Default                      | Description                                        |
-| -------------------------- | ---------------------------- | -------------------------------------------------- |
-| `PORT`                     | 9537                         | HTTP server port                                   |
-| `BASE_URL`                 | https://speed.cloudflare.com | Cloudflare speedtest base URL                      |
-| `TEST_INTERVAL_MS`         | 3600000 (1 hour)             | Interval between tests in milliseconds             |
-| `DOWNLOAD_DURATION_MS`     | 10000 (10s)                  | Download test duration                             |
-| `UPLOAD_DURATION_MS`       | 10000 (10s)                  | Upload test duration                               |
-| `IDLE_LATENCY_DURATION_MS` | 2000 (2s)                    | Idle latency test duration                         |
-| `CONCURRENCY`              | 6                            | Number of concurrent requests for throughput tests |
-| `DOWNLOAD_BYTES_PER_REQ`   | 10000000 (10MB)              | Bytes per download request                         |
-| `UPLOAD_BYTES_PER_REQ`     | 5000000 (5MB)                | Bytes per upload request                           |
-| `PROBE_INTERVAL_MS`        | 250                          | Interval between latency probes                    |
-| `PROBE_TIMEOUT_MS`         | 800                          | Timeout for individual probes                      |
-| `SKIP_DIAGNOSTICS`         | false                        | Skip DNS and TLS diagnostics                       |
-| `TRACEROUTE`               | false                        | Enable traceroute (not implemented)                |
-| `ASN`                      | -                            | Override ASN                                       |
-| `AS_ORG`                   | -                            | Override AS organization                           |
-| `INTERFACE_NAME`           | -                            | Override interface name                            |
-| `NETWORK_NAME`             | -                            | Override network name                              |
-| `LOCAL_IPV4`               | -                            | Override local IPv4                                |
-| `LOCAL_IPV6`               | -                            | Override local IPv6                                |
-| `EXTERNAL_IPV4`            | -                            | Override external IPv4                             |
-| `EXTERNAL_IPV6`            | -                            | Override external IPv6                             |
+| Variable            | Default                      | Description                            |
+| ------------------- | ---------------------------- | -------------------------------------- |
+| `PORT`              | 9537                         | HTTP server port                       |
+| `BASE_URL`          | https://speed.cloudflare.com | Cloudflare speedtest base URL          |
+| `TEST_INTERVAL_MS`  | 3600000 (1 hour)             | Interval between tests in milliseconds |
+| `PROBE_INTERVAL_MS` | 250                          | Interval between latency probes        |
+| `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
+| `SKIP_DIAGNOSTICS`  | false                        | Skip DNS and TLS diagnostics           |
+| `TRACEROUTE`        | false                        | Enable traceroute (not implemented)    |
+| `ASN`               | -                            | Override ASN                           |
+| `AS_ORG`            | -                            | Override AS organization               |
+| `INTERFACE_NAME`    | -                            | Override interface name                |
+| `NETWORK_NAME`      | -                            | Override network name                  |
+| `LOCAL_IPV4`        | -                            | Override local IPv4                    |
+| `LOCAL_IPV6`        | -                            | Override local IPv6                    |
+| `EXTERNAL_IPV4`     | -                            | Override external IPv4                 |
+| `EXTERNAL_IPV6`     | -                            | Override external IPv6                 |
 
 ### Example with custom configuration
 
 ```bash
 docker run -d -p 9537:9537 \
-  -e TEST_INTERVAL_MS=300000 \  # 5 minutes
-  -e CONCURRENCY=4 \
-  -e DOWNLOAD_DURATION_MS=5000 \
+  -e TEST_INTERVAL_MS=300000 \
   --name speedtest-exporter \
   speedtest-exporter
 ```
