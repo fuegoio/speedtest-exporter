@@ -155,8 +155,9 @@ All configuration is done via environment variables:
 | `PORT`              | 9537                         | HTTP server port                       |
 | `BASE_URL`          | https://speed.cloudflare.com | Cloudflare speedtest base URL          |
 | `TEST_INTERVAL_MS`  | 3600000 (1 hour)             | Interval between tests in milliseconds |
-| `PROBE_INTERVAL_MS` | 250                          | Interval between latency probes        |
-| `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
+| `PROBE_INTERVAL_MS`   | 250                          | Interval between latency probes in milliseconds  |
+| `PROBE_TIMEOUT_MS`    | 800                          | Timeout for individual probes in milliseconds    |
+| `LATENCY_DURATION_MS` | 10000 (10 seconds)           | Duration of each latency measurement phase       |
 | `DNS_HOSTNAME`      | hostname from `BASE_URL`     | Hostname to resolve in DNS tests       |
 | `DNS_RUNS`          | 10                           | Number of DNS resolution runs per test |
 | `SKIP_DNS`          | false                        | Skip DNS diagnostics                   |

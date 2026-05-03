@@ -75,10 +75,13 @@ func mockCloudflareServer(t *testing.T) *httptest.Server {
 // newTestEngine creates a CloudflareSpeedtest pointed at the given base URL.
 func newTestEngine(baseURL string) *CloudflareSpeedtest {
 	cfg := config.ExporterConfig{
-		BaseURL:        baseURL,
-		ProbeTimeoutMs: 5 * time.Second,
-		DnsRuns:        10,
-		TlsRuns:        10,
+		BaseURL:           baseURL,
+		ProbeTimeoutMs:    5 * time.Second,
+		LatencyDurationMs: 500 * time.Millisecond,
+		DnsRuns:           10,
+		TlsRuns:           10,
+		SkipDns:           true,
+		SkipTls:           true,
 	}
 	return NewCloudflareSpeedtest(cfg)
 }
@@ -498,8 +501,11 @@ func TestRunDirectTest(t *testing.T) {
 	defer srv.Close()
 
 	cfg := config.ExporterConfig{
-		BaseURL:        srv.URL,
-		ProbeTimeoutMs: 2 * time.Second,
+		BaseURL:           srv.URL,
+		ProbeTimeoutMs:    2 * time.Second,
+		LatencyDurationMs: 500 * time.Millisecond,
+		SkipDns:           true,
+		SkipTls:           true,
 	}
 	engine := NewCloudflareSpeedtest(cfg)
 
@@ -578,16 +584,19 @@ func TestRunDirectTestConfigOverrides(t *testing.T) {
 	customExtIPv6 := "2001:db8::1"
 
 	cfg := config.ExporterConfig{
-		BaseURL:        srv.URL,
-		ProbeTimeoutMs: 2 * time.Second,
-		Asn:            &customAsn,
-		AsOrg:          &customOrg,
-		InterfaceName:  &customIface,
-		NetworkName:    &customNet,
-		LocalIpv4:      &customIPv4,
-		LocalIpv6:      &customIPv6,
-		ExternalIpv4:   &customExtIPv4,
-		ExternalIpv6:   &customExtIPv6,
+		BaseURL:           srv.URL,
+		ProbeTimeoutMs:    2 * time.Second,
+		LatencyDurationMs: 500 * time.Millisecond,
+		SkipDns:           true,
+		SkipTls:           true,
+		Asn:               &customAsn,
+		AsOrg:             &customOrg,
+		InterfaceName:     &customIface,
+		NetworkName:       &customNet,
+		LocalIpv4:         &customIPv4,
+		LocalIpv6:         &customIPv6,
+		ExternalIpv4:      &customExtIPv4,
+		ExternalIpv6:      &customExtIPv6,
 	}
 	engine := NewCloudflareSpeedtest(cfg)
 

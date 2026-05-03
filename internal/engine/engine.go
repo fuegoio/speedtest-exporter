@@ -328,7 +328,7 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 func (c *CloudflareSpeedtest) measureIdleLatency(baseURL, server, colo string) *model.LatencySummary {
 	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
 	log.Printf("[Speedtest] Running idle latency tests...")
-	return c.measureLatency(latencyURL, 10*time.Second, 100*time.Millisecond)
+	return c.measureLatency(latencyURL, c.config.LatencyDurationMs, 100*time.Millisecond)
 }
 
 // measureLoadedLatencyDownload runs latency tests while download is running in background
@@ -425,7 +425,7 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 	)
 
 	// Run loaded latency tests during download (10 pings)
-	loadedLatencyDownload := c.measureLoadedLatencyDownload(c.config.BaseURL, server, colo, 10*time.Second)
+	loadedLatencyDownload := c.measureLoadedLatencyDownload(c.config.BaseURL, server, colo, c.config.LatencyDurationMs)
 
 	// Run sequential upload tests
 	log.Printf("[Speedtest] Running sequential upload tests...")
@@ -446,7 +446,7 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 	)
 
 	// Run loaded latency tests during upload (10 pings)
-	loadedLatencyUpload := c.measureLoadedLatencyUpload(c.config.BaseURL, server, colo, 10*time.Second)
+	loadedLatencyUpload := c.measureLoadedLatencyUpload(c.config.BaseURL, server, colo, c.config.LatencyDurationMs)
 
 	// Use the last results for backward compatibility
 	var download *model.ThroughputSummary

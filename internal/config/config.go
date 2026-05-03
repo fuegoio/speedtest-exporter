@@ -19,8 +19,9 @@ type ExporterConfig struct {
 	Concurrency    int
 
 	// Probe configuration
-	ProbeIntervalMs time.Duration
-	ProbeTimeoutMs  time.Duration
+	ProbeIntervalMs   time.Duration
+	ProbeTimeoutMs    time.Duration
+	LatencyDurationMs time.Duration
 
 	// DNS diagnostics configuration
 	DnsHostname string
@@ -49,17 +50,18 @@ func LoadConfig() ExporterConfig {
 	defaultDnsHostname := getHostnameFromURL(baseURL)
 
 	config := ExporterConfig{
-		Port:            getIntEnv("PORT", 9537),
-		TestIntervalMs:  getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
-		BaseURL:         baseURL,
-		Concurrency:     getIntEnv("CONCURRENCY", 6),
-		ProbeIntervalMs: getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
-		ProbeTimeoutMs:  getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
-		DnsHostname:     getStringEnv("DNS_HOSTNAME", defaultDnsHostname),
-		DnsRuns:         getIntEnv("DNS_RUNS", 10),
-		SkipDns:         getBoolEnv("SKIP_DNS", false),
-		TlsRuns:         getIntEnv("TLS_RUNS", 10),
-		SkipTls:         getBoolEnv("SKIP_TLS", false),
+		Port:              getIntEnv("PORT", 9537),
+		TestIntervalMs:    getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
+		BaseURL:           baseURL,
+		Concurrency:       getIntEnv("CONCURRENCY", 6),
+		ProbeIntervalMs:   getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
+		ProbeTimeoutMs:    getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
+		LatencyDurationMs: getDurationEnv("LATENCY_DURATION_MS", 10*time.Second),
+		DnsHostname:       getStringEnv("DNS_HOSTNAME", defaultDnsHostname),
+		DnsRuns:           getIntEnv("DNS_RUNS", 10),
+		SkipDns:           getBoolEnv("SKIP_DNS", false),
+		TlsRuns:           getIntEnv("TLS_RUNS", 10),
+		SkipTls:           getBoolEnv("SKIP_TLS", false),
 	}
 
 	// Network information overrides
