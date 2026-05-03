@@ -408,7 +408,9 @@ func UpdateMetrics(result *model.RunResult) {
 	).Set(float64(result.Upload.DurationMs))
 
 	// Idle latency metrics
-	IdleLatencyMs.With(labels).Set(derefFloat64(result.IdleLatency.MedianMs, 0))
+	idleLabels := labels
+	idleLabels["type"] = "idle"
+	IdleLatencyMs.With(idleLabels).Set(derefFloat64(result.IdleLatency.MedianMs, 0))
 	IdleLatencyMinMs.WithLabelValues(
 		labels["server"], labels["colo"],
 	).Set(derefFloat64(result.IdleLatency.MinMs, 0))
