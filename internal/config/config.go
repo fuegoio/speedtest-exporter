@@ -13,9 +13,9 @@ type ExporterConfig struct {
 	Port int
 
 	// Test timing configuration
-	TestIntervalMs        time.Duration
-	BaseURL              string
-	Concurrency          int
+	TestIntervalMs time.Duration
+	BaseURL        string
+	Concurrency    int
 
 	// Probe configuration
 	ProbeIntervalMs time.Duration
@@ -27,26 +27,26 @@ type ExporterConfig struct {
 
 	// Network information overrides
 	Asn           *string
-	AsOrg        *string
+	AsOrg         *string
 	InterfaceName *string
-	NetworkName  *string
-	LocalIpv4    *string
-	LocalIpv6    *string
-	ExternalIpv4 *string
-	ExternalIpv6 *string
+	NetworkName   *string
+	LocalIpv4     *string
+	LocalIpv6     *string
+	ExternalIpv4  *string
+	ExternalIpv6  *string
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() ExporterConfig {
 	config := ExporterConfig{
-		Port:               getIntEnv("PORT", 9537),
-		TestIntervalMs:     getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
-		BaseURL:            getStringEnv("BASE_URL", "https://speed.cloudflare.com"),
-		Concurrency:        getIntEnv("CONCURRENCY", 6),
-		ProbeIntervalMs:    getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
-		ProbeTimeoutMs:     getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
-		SkipDiagnostics:    getBoolEnv("SKIP_DIAGNOSTICS", false),
-		Traceroute:         getBoolEnv("TRACEROUTE", false),
+		Port:            getIntEnv("PORT", 9537),
+		TestIntervalMs:  getDurationEnv("TEST_INTERVAL_MS", 1*time.Hour),
+		BaseURL:         getStringEnv("BASE_URL", "https://speed.cloudflare.com"),
+		Concurrency:     getIntEnv("CONCURRENCY", 6),
+		ProbeIntervalMs: getDurationEnv("PROBE_INTERVAL_MS", 250*time.Millisecond),
+		ProbeTimeoutMs:  getDurationEnv("PROBE_TIMEOUT_MS", 800*time.Millisecond),
+		SkipDiagnostics: getBoolEnv("SKIP_DIAGNOSTICS", false),
+		Traceroute:      getBoolEnv("TRACEROUTE", false),
 	}
 
 	// Network information overrides

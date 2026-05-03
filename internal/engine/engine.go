@@ -55,7 +55,7 @@ func computePercentile(samples []float64, percentile float64) float64 {
 	if len(samples) == 0 {
 		return 0
 	}
-	pos := (float64(len(samples)-1)) * percentile
+	pos := (float64(len(samples) - 1)) * percentile
 	base := int(math.Floor(pos))
 	rest := pos - float64(base)
 	if base+1 < len(samples) {
@@ -188,16 +188,16 @@ func fetchWithTimeout(client *http.Client, url string, timeout time.Duration) (*
 
 // metaResponse is the JSON response from https://speed.cloudflare.com/meta
 type metaResponse struct {
-	ClientIp        string `json:"clientIp"`
-	Asn             int    `json:"asn"`
-	AsOrganization  string `json:"asOrganization"`
-	Country         string `json:"country"`
-	City            string `json:"city"`
-	Region          string `json:"region"`
-	PostalCode      string `json:"postalCode"`
-	Latitude        string `json:"latitude"`
-	Longitude       string `json:"longitude"`
-	Colo            struct {
+	ClientIp       string `json:"clientIp"`
+	Asn            int    `json:"asn"`
+	AsOrganization string `json:"asOrganization"`
+	Country        string `json:"country"`
+	City           string `json:"city"`
+	Region         string `json:"region"`
+	PostalCode     string `json:"postalCode"`
+	Latitude       string `json:"latitude"`
+	Longitude      string `json:"longitude"`
+	Colo           struct {
 		IATA string `json:"iata"`
 	} `json:"colo"`
 }
@@ -336,7 +336,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyDownload(baseURL, server, colo
 	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
 	downloadURL := fmt.Sprintf("%s/__down?bytes=%d", baseURL, 100*1024) // 100kB
 	log.Printf("[Speedtest] Running loaded latency tests during download...")
-	
+
 	// Start background download
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -356,7 +356,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyUpload(baseURL, server, colo s
 	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
 	uploadURL := fmt.Sprintf("%s/__up?bytes=%d", baseURL, 100*1024) // 100kB
 	log.Printf("[Speedtest] Running loaded latency tests during upload...")
-	
+
 	// Start background upload
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -413,10 +413,10 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 			size       int64
 			iterations int
 		}{
-			{100 * 1024, 10},    // 100kB, 10 times
-			{1 * 1024 * 1024, 8}, // 1MB, 8 times
-			{10 * 1024 * 1024, 6}, // 10MB, 6 times
-			{25 * 1024 * 1024, 4}, // 25MB, 4 times
+			{100 * 1024, 10},       // 100kB, 10 times
+			{1 * 1024 * 1024, 8},   // 1MB, 8 times
+			{10 * 1024 * 1024, 6},  // 10MB, 6 times
+			{25 * 1024 * 1024, 4},  // 25MB, 4 times
 			{100 * 1024 * 1024, 3}, // 100MB, 3 times
 			{250 * 1024 * 1024, 2}, // 250MB, 2 times
 		},
@@ -435,8 +435,8 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 			size       int64
 			iterations int
 		}{
-			{100 * 1024, 8},    // 100kB, 8 times
-			{1 * 1024 * 1024, 6}, // 1MB, 6 times
+			{100 * 1024, 8},       // 100kB, 8 times
+			{1 * 1024 * 1024, 6},  // 1MB, 6 times
 			{10 * 1024 * 1024, 4}, // 10MB, 4 times
 			{25 * 1024 * 1024, 4}, // 25MB, 4 times
 			{50 * 1024 * 1024, 3}, // 50MB, 3 times
@@ -464,24 +464,24 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 
 	// Build result
 	result := &model.RunResult{
-		Version:              "1.0.0",
-		TimestampUTC:         time.Now().UTC().Format(time.RFC3339),
-		BaseURL:              c.config.BaseURL,
-		MeasID:               measID,
-		Server:               &server,
-		Colo:                 &colo,
-		IP:                   &externalIP,
-		IdleLatency:          *idleLatency,
-		Download:             *download,
-		Upload:               *upload,
+		Version:               "1.0.0",
+		TimestampUTC:          time.Now().UTC().Format(time.RFC3339),
+		BaseURL:               c.config.BaseURL,
+		MeasID:                measID,
+		Server:                &server,
+		Colo:                  &colo,
+		IP:                    &externalIP,
+		IdleLatency:           *idleLatency,
+		Download:              *download,
+		Upload:                *upload,
 		LoadedLatencyDownload: *loadedLatencyDownload,
 		LoadedLatencyUpload:   *loadedLatencyUpload,
-		Country:              &country,
-		City:                 &city,
-		Region:               &region,
-		PostalCode:           &postalCode,
-		Latitude:             &latitude,
-		Longitude:            &longitude,
+		Country:               &country,
+		City:                  &city,
+		Region:                &region,
+		PostalCode:            &postalCode,
+		Latitude:              &latitude,
+		Longitude:             &longitude,
 	}
 
 	log.Printf("[Speedtest] Test completed successfully with measurement ID: %s", measID)
@@ -676,9 +676,9 @@ func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
 	}
 
 	return &model.DnsSummary{
-		Hostname:          hostname,
+		Hostname:         hostname,
 		ResolutionTimeMs: float64(elapsed),
-		ResolvedIPs:       make([]string, len(ips)),
+		ResolvedIPs:      make([]string, len(ips)),
 		Ipv4Count:        ipv4Count,
 		Ipv6Count:        ipv6Count,
 	}
@@ -747,15 +747,15 @@ func (c *CloudflareSpeedtest) computeLatencySummary(samples []float64) *model.La
 	sort.Float64s(validSamples)
 
 	return &model.LatencySummary{
-		Sent:       len(samples),
-		Received:   len(validSamples),
-		Loss:       loss,
-		MinMs:      floatPtr(validSamples[0]),
-		MeanMs:     floatPtr(computeMean(validSamples)),
-		MedianMs:   floatPtr(computeMedian(validSamples)),
-		P25Ms:      floatPtr(computePercentile(validSamples, 0.25)),
-		P75Ms:      floatPtr(computePercentile(validSamples, 0.75)),
-		MaxMs:      floatPtr(validSamples[len(validSamples)-1]),
-		JitterMs:   floatPtr(computeJitter(validSamples)),
+		Sent:     len(samples),
+		Received: len(validSamples),
+		Loss:     loss,
+		MinMs:    floatPtr(validSamples[0]),
+		MeanMs:   floatPtr(computeMean(validSamples)),
+		MedianMs: floatPtr(computeMedian(validSamples)),
+		P25Ms:    floatPtr(computePercentile(validSamples, 0.25)),
+		P75Ms:    floatPtr(computePercentile(validSamples, 0.75)),
+		MaxMs:    floatPtr(validSamples[len(validSamples)-1]),
+		JitterMs: floatPtr(computeJitter(validSamples)),
 	}
 }

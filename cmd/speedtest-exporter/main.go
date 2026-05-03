@@ -20,8 +20,8 @@ import (
 
 // SpeedtestExporter is the main exporter struct
 type SpeedtestExporter struct {
-	config      config.ExporterConfig
-	speedtest   *engine.CloudflareSpeedtest
+	config     config.ExporterConfig
+	speedtest  *engine.CloudflareSpeedtest
 	running    bool
 	stopChan   chan struct{}
 	cancelFunc context.CancelFunc
@@ -32,8 +32,8 @@ func NewSpeedtestExporter(cfg config.ExporterConfig) *SpeedtestExporter {
 	return &SpeedtestExporter{
 		config:    cfg,
 		speedtest: engine.NewCloudflareSpeedtest(cfg),
-		running:  false,
-		stopChan: make(chan struct{}),
+		running:   false,
+		stopChan:  make(chan struct{}),
 	}
 }
 

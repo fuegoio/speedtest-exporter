@@ -18,7 +18,7 @@ import (
 // ---------------------------------------------------------------------------
 
 // ptr helpers
-func strPtr(s string) *string  { return &s }
+func strPtr(s string) *string   { return &s }
 func f64Ptr(f float64) *float64 { return &f }
 
 // freshMetrics replaces all package-level metric vars with new instances and
