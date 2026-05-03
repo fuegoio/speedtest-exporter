@@ -46,17 +46,9 @@ func freshMetrics(t *testing.T) *prometheus.Registry {
 		Name: "speedtest_latency_loss_percent", Help: ".",
 	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
-	DnsResolutionTimeMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_dns_resolution_time_ms", Help: ".",
+	DnsResolutionTimeMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "speedtest_dns_resolution_time_ms", Help: ".", Buckets: latencyBuckets,
 	}, []string{"hostname", "dns_server"})
-
-	DnsIpv4Count = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_dns_ipv4_count", Help: ".",
-	}, []string{"hostname"})
-
-	DnsIpv6Count = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_dns_ipv6_count", Help: ".",
-	}, []string{"hostname"})
 
 	TlsHandshakeTimeMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "speedtest_tls_handshake_time_ms", Help: ".",
@@ -188,11 +180,10 @@ func buildResult() *model.RunResult {
 			JitterMs: f64Ptr(7.0),
 		},
 		Dns: &model.DnsSummary{
-			Hostname:         "speed.cloudflare.com",
-			ResolutionTimeMs: 12.5,
-			Ipv4Count:        2,
-			Ipv6Count:        1,
-			DnsServers:       []string{"8.8.8.8"},
+			Hostname:              "speed.cloudflare.com",
+			ResolutionTimeMs:      12.5,
+			ResolutionTimeSamples: []float64{10.0, 12.0, 14.0, 11.0, 13.0, 12.0, 11.0, 13.0, 14.0, 12.0},
+			DnsServers:            []string{"8.8.8.8"},
 		},
 		Tls: &model.TlsSummary{
 			HandshakeTimeMs: 45.0,
@@ -350,24 +341,21 @@ func TestUpdateMetricsDns(t *testing.T) {
 	if mf == nil {
 		t.Fatal("speedtest_dns_resolution_time_ms not found")
 	}
-	if mf.GetMetric()[0].GetGauge().GetValue() != 12.5 {
-		t.Errorf("dns resolution time = %v, want 12.5", mf.GetMetric()[0].GetGauge().GetValue())
+	h := mf.GetMetric()[0].GetHistogram()
+	if h.GetSampleCount() != 10 {
+		t.Errorf("dns sample count = %d, want 10", h.GetSampleCount())
+	}
+	// sum of samples: 10+12+14+11+13+12+11+13+14+12 = 122
+	if h.GetSampleSum() != 122.0 {
+		t.Errorf("dns resolution sum = %v, want 122.0", h.GetSampleSum())
 	}
 
-	mfV4 := gather(t, reg, "speedtest_dns_ipv4_count")
-	if mfV4 == nil {
-		t.Fatal("speedtest_dns_ipv4_count not found")
+	// Removed metrics must not appear
+	if gather(t, reg, "speedtest_dns_ipv4_count") != nil {
+		t.Error("speedtest_dns_ipv4_count should not exist")
 	}
-	if mfV4.GetMetric()[0].GetGauge().GetValue() != 2 {
-		t.Errorf("ipv4 count = %v, want 2", mfV4.GetMetric()[0].GetGauge().GetValue())
-	}
-
-	mfV6 := gather(t, reg, "speedtest_dns_ipv6_count")
-	if mfV6 == nil {
-		t.Fatal("speedtest_dns_ipv6_count not found")
-	}
-	if mfV6.GetMetric()[0].GetGauge().GetValue() != 1 {
-		t.Errorf("ipv6 count = %v, want 1", mfV6.GetMetric()[0].GetGauge().GetValue())
+	if gather(t, reg, "speedtest_dns_ipv6_count") != nil {
+		t.Error("speedtest_dns_ipv6_count should not exist")
 	}
 }
 

@@ -71,28 +71,13 @@ var (
 	)
 
 	// DNS metrics
-	DnsResolutionTimeMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_dns_resolution_time_ms",
-			Help: "DNS resolution time in milliseconds",
+	DnsResolutionTimeMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_dns_resolution_time_ms",
+			Help:    "DNS resolution time in milliseconds (histogram over 10 runs)",
+			Buckets: latencyBuckets,
 		},
 		[]string{"hostname", "dns_server"},
-	)
-
-	DnsIpv4Count = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_dns_ipv4_count",
-			Help: "Number of IPv4 addresses resolved",
-		},
-		[]string{"hostname"},
-	)
-
-	DnsIpv6Count = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_dns_ipv6_count",
-			Help: "Number of IPv6 addresses resolved",
-		},
-		[]string{"hostname"},
 	)
 
 	// TLS metrics
@@ -176,7 +161,7 @@ func RegisterAll(reg prometheus.Registerer) error {
 		DownloadMbps,
 		UploadMbps,
 		LatencyMs, LatencyJitterMs, LatencyLossPercent,
-		DnsResolutionTimeMs, DnsIpv4Count, DnsIpv6Count,
+		DnsResolutionTimeMs,
 		TlsHandshakeTimeMs,
 		LocalIpv4, LocalIpv6, ExternalIpv4, ExternalIpv6,
 		TestTimestamp, TestDurationTotalMs,
@@ -248,12 +233,12 @@ func UpdateMetrics(result *model.RunResult) {
 
 	// DNS metrics
 	if result.Dns != nil {
-		DnsResolutionTimeMs.WithLabelValues(
-			result.Dns.Hostname,
-			strings.Join(result.Dns.DnsServers, ","),
-		).Set(result.Dns.ResolutionTimeMs)
-		DnsIpv4Count.WithLabelValues(result.Dns.Hostname).Set(float64(result.Dns.Ipv4Count))
-		DnsIpv6Count.WithLabelValues(result.Dns.Hostname).Set(float64(result.Dns.Ipv6Count))
+		for _, ms := range result.Dns.ResolutionTimeSamples {
+			DnsResolutionTimeMs.WithLabelValues(
+				result.Dns.Hostname,
+				strings.Join(result.Dns.DnsServers, ","),
+			).Observe(ms)
+		}
 	}
 
 	// TLS metrics

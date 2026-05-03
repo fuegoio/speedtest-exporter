@@ -23,12 +23,11 @@ type ThroughputSummary struct {
 
 // DnsSummary contains DNS resolution statistics
 type DnsSummary struct {
-	Hostname         string   `json:"hostname"`
-	ResolutionTimeMs float64  `json:"resolution_time_ms"`
-	ResolvedIPs      []string `json:"resolved_ips"`
-	Ipv4Count        int      `json:"ipv4_count"`
-	Ipv6Count        int      `json:"ipv6_count"`
-	DnsServers       []string `json:"dns_servers,omitempty"`
+	Hostname              string    `json:"hostname"`
+	ResolutionTimeMs      float64   `json:"resolution_time_ms"`
+	ResolutionTimeSamples []float64 `json:"resolution_time_samples"`
+	ResolvedIPs           []string  `json:"resolved_ips"`
+	DnsServers            []string  `json:"dns_servers,omitempty"`
 }
 
 // TlsSummary contains TLS handshake statistics

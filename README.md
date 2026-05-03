@@ -8,7 +8,7 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 - **Download/Upload Speed**: Measures download and upload speeds in Mbps
 - **Latency Tests**: Measures idle latency, loaded latency (during download/upload)
-- **DNS Resolution**: Measures DNS resolution time and IP counts
+- **DNS Resolution**: Measures DNS resolution time as a histogram over 10 runs
 - **TLS Handshake**: Measures TLS handshake time and protocol/cipher info
 - **Network Information**: Captures local/external IPs, ASN, ISP info
 - **Prometheus Metrics**: Exposes all data as Prometheus-compatible metrics
@@ -47,11 +47,11 @@ The `during` label is `idle`, `download`, or `upload`.
 
 ### DNS Metrics
 
-| Metric                             | Labels               | Description                         |
-| ---------------------------------- | -------------------- | ----------------------------------- |
-| `speedtest_dns_resolution_time_ms` | hostname, dns_server | DNS resolution time in milliseconds |
-| `speedtest_dns_ipv4_count`         | hostname             | Number of IPv4 addresses resolved   |
-| `speedtest_dns_ipv6_count`         | hostname             | Number of IPv6 addresses resolved   |
+| Metric                             | Labels               | Description                                                        |
+| ---------------------------------- | -------------------- | ------------------------------------------------------------------ |
+| `speedtest_dns_resolution_time_ms` | hostname, dns_server | DNS resolution time in milliseconds (histogram over 10 runs)       |
+
+**Note**: `speedtest_dns_resolution_time_ms` is a histogram. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### TLS Metrics
 

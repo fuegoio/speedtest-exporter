@@ -650,37 +650,44 @@ func (c *CloudflareSpeedtest) measureUploadThroughput(url string, size int64, du
 	}
 }
 
-// measureDns measures DNS resolution time
+// measureDns measures DNS resolution time over 10 runs
 func (c *CloudflareSpeedtest) measureDns() *model.DnsSummary {
+	const runs = 10
 	hostname := getHostname(c.config.BaseURL)
-	start := time.Now()
 
-	// Simple DNS resolution
-	_, err := net.LookupHost(hostname)
-	elapsed := time.Since(start).Milliseconds()
+	var samples []float64
+	var resolvedIPs []string
 
-	// Count IPv4 and IPv6
-	ips, err := net.LookupIP(hostname)
-	if err != nil {
-		return nil
-	}
-
-	ipv4Count := 0
-	ipv6Count := 0
-	for _, ip := range ips {
-		if ip.To4() != nil {
-			ipv4Count++
-		} else {
-			ipv6Count++
+	for i := 0; i < runs; i++ {
+		start := time.Now()
+		ips, err := net.LookupIP(hostname)
+		elapsed := float64(time.Since(start).Milliseconds())
+		if err != nil {
+			continue
+		}
+		samples = append(samples, elapsed)
+		if i == 0 {
+			for _, ip := range ips {
+				resolvedIPs = append(resolvedIPs, ip.String())
+			}
 		}
 	}
 
+	if len(samples) == 0 {
+		return nil
+	}
+
+	sum := 0.0
+	for _, s := range samples {
+		sum += s
+	}
+	mean := sum / float64(len(samples))
+
 	return &model.DnsSummary{
-		Hostname:         hostname,
-		ResolutionTimeMs: float64(elapsed),
-		ResolvedIPs:      make([]string, len(ips)),
-		Ipv4Count:        ipv4Count,
-		Ipv6Count:        ipv6Count,
+		Hostname:              hostname,
+		ResolutionTimeMs:      mean,
+		ResolutionTimeSamples: samples,
+		ResolvedIPs:           resolvedIPs,
 	}
 }
 
