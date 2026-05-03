@@ -21,7 +21,7 @@ import (
 // ---------------------------------------------------------------------------
 
 // mockCloudflareServer creates a test HTTP server that mimics the Cloudflare
-// speed test endpoints: /meta, /__down, /__up, /__latency.
+// speed test endpoints: /meta, /__down, /__up. Latency probes use /__down?bytes=0.
 func mockCloudflareServer(t *testing.T) *httptest.Server {
 	t.Helper()
 
@@ -46,15 +46,17 @@ func mockCloudflareServer(t *testing.T) *httptest.Server {
 		})
 	})
 
-	// /__down?bytes=N — streams exactly N zero bytes
+	// /__down?bytes=N — streams exactly N zero bytes; bytes=0 is valid (used for latency probes)
 	mux.HandleFunc("/__down", func(w http.ResponseWriter, r *http.Request) {
-		n, _ := strconv.ParseInt(r.URL.Query().Get("bytes"), 10, 64)
-		if n <= 0 {
+		n, err := strconv.ParseInt(r.URL.Query().Get("bytes"), 10, 64)
+		if err != nil || n < 0 {
 			n = 1024
 		}
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", n))
-		io.Copy(w, io.LimitReader(bytes.NewReader(make([]byte, n)), n))
+		if n > 0 {
+			io.Copy(w, io.LimitReader(bytes.NewReader(make([]byte, n)), n))
+		}
 	})
 
 	// /__up — reads the request body and returns 200
@@ -63,11 +65,8 @@ func mockCloudflareServer(t *testing.T) *httptest.Server {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// /__latency — returns a tiny response immediately
-	mux.HandleFunc("/__latency", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("ok"))
-	})
+	// /__down?bytes=0 — used for latency probes (zero-byte download)
+	// The existing /__down handler already handles bytes=0 correctly.
 
 	return httptest.NewServer(mux)
 }
@@ -419,7 +418,7 @@ func TestMeasureLatency(t *testing.T) {
 	defer srv.Close()
 
 	engine := newTestEngine(srv.URL)
-	url := fmt.Sprintf("%s/__latency", srv.URL)
+	url := fmt.Sprintf("%s/__down?bytes=0", srv.URL)
 
 	// Run for 500ms with 100ms interval → expect ~5 samples
 	result := engine.measureLatency(url, 500*time.Millisecond, 100*time.Millisecond)
@@ -456,7 +455,7 @@ func TestMeasureLatencyAllLoss(t *testing.T) {
 	defer srv.Close()
 
 	engine := newTestEngine(srv.URL)
-	url := fmt.Sprintf("%s/__latency", srv.URL)
+	url := fmt.Sprintf("%s/__down?bytes=0", srv.URL)
 
 	result := engine.measureLatency(url, 300*time.Millisecond, 100*time.Millisecond)
 	if result == nil {
@@ -780,12 +779,11 @@ func TestSpeedtestIntegration(t *testing.T) {
 	if result.Upload.Mbps <= 0 {
 		t.Errorf("expected positive upload speed, got %.2f Mbps", result.Upload.Mbps)
 	}
-	if result.IdleLatency.MedianMs == nil || *result.IdleLatency.MedianMs < 0 {
-		t.Error("expected non-negative idle latency median")
-	}
-
 	t.Logf("Server: %s, Colo: %s", *result.Server, *result.Colo)
 	t.Logf("Download: %.2f Mbps (%d bytes in %v)", result.Download.Mbps, result.Download.Bytes, time.Duration(result.Download.DurationMs)*time.Millisecond)
 	t.Logf("Upload: %.2f Mbps (%d bytes in %v)", result.Upload.Mbps, result.Upload.Bytes, time.Duration(result.Upload.DurationMs)*time.Millisecond)
+	if result.IdleLatency.MedianMs == nil || *result.IdleLatency.MedianMs < 0 {
+		t.Fatalf("expected non-negative idle latency median, got loss=%.2f%% (%d/%d probes failed)", result.IdleLatency.Loss*100, result.IdleLatency.Sent-result.IdleLatency.Received, result.IdleLatency.Sent)
+	}
 	t.Logf("Idle Latency: median=%.2fms, loss=%.2f%%", *result.IdleLatency.MedianMs, result.IdleLatency.Loss*100)
 }

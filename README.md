@@ -1,4 +1,4 @@
-# Speedtest Exporter
+# ⚡ Speedtest Exporter
 
 A golang Prometheus exporter for network performance metrics. This exporter runs periodic speed tests against Cloudflare's speed test infrastructure (`speed.cloudflare.com`) and exposes comprehensive metrics in Prometheus format.
 

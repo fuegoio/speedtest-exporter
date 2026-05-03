@@ -326,14 +326,14 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 
 // measureIdleLatency runs idle latency tests
 func (c *CloudflareSpeedtest) measureIdleLatency(baseURL, server, colo string) *model.LatencySummary {
-	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
+	latencyURL := fmt.Sprintf("%s/__down?bytes=0", baseURL)
 	log.Printf("[Speedtest] Running idle latency tests...")
 	return c.measureLatency(latencyURL, c.config.LatencyDurationMs, 100*time.Millisecond)
 }
 
 // measureLoadedLatencyDownload runs latency tests while download is running in background
 func (c *CloudflareSpeedtest) measureLoadedLatencyDownload(baseURL, server, colo string, durationMs time.Duration) *model.LatencySummary {
-	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
+	latencyURL := fmt.Sprintf("%s/__down?bytes=0", baseURL)
 	downloadURL := fmt.Sprintf("%s/__down?bytes=%d", baseURL, 100*1024) // 100kB
 	log.Printf("[Speedtest] Running loaded latency tests during download...")
 
@@ -353,7 +353,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyDownload(baseURL, server, colo
 
 // measureLoadedLatencyUpload runs latency tests while upload is running in background
 func (c *CloudflareSpeedtest) measureLoadedLatencyUpload(baseURL, server, colo string, durationMs time.Duration) *model.LatencySummary {
-	latencyURL := fmt.Sprintf("%s/__latency", baseURL)
+	latencyURL := fmt.Sprintf("%s/__down?bytes=0", baseURL)
 	uploadURL := fmt.Sprintf("%s/__up?bytes=%d", baseURL, 100*1024) // 100kB
 	log.Printf("[Speedtest] Running loaded latency tests during upload...")
 
