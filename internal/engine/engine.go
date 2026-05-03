@@ -43,15 +43,11 @@ func computeMedian(samples []float64) float64 {
 	if len(samples) == 0 {
 		return 0
 	}
-	sorted := make([]float64, len(samples))
-	copy(sorted, samples)
-	sort.Float64s(sorted)
-
-	mid := len(sorted) / 2
-	if len(sorted)%2 == 0 {
-		return (sorted[mid-1] + sorted[mid]) / 2
+	mid := len(samples) / 2
+	if len(samples)%2 == 0 {
+		return (samples[mid-1] + samples[mid]) / 2
 	}
-	return sorted[mid]
+	return samples[mid]
 }
 
 // computePercentile computes the percentile of a sorted slice
@@ -59,18 +55,25 @@ func computePercentile(samples []float64, percentile float64) float64 {
 	if len(samples) == 0 {
 		return 0
 	}
-	sorted := make([]float64, len(samples))
-	copy(sorted, samples)
-	sort.Float64s(sorted)
-
-	pos := (float64(len(sorted)-1)) * percentile
+	pos := (float64(len(samples)-1)) * percentile
 	base := int(math.Floor(pos))
 	rest := pos - float64(base)
-
-	if base+1 < len(sorted) {
-		return sorted[base] + rest*(sorted[base+1]-sorted[base])
+	if base+1 < len(samples) {
+		return samples[base] + rest*(samples[base+1]-samples[base])
 	}
-	return sorted[base]
+	return samples[base]
+}
+
+// computeMean computes the mean of samples
+func computeMean(samples []float64) float64 {
+	if len(samples) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, s := range samples {
+		sum += s
+	}
+	return sum / float64(len(samples))
 }
 
 // computeJitter computes the jitter (standard deviation) of samples
@@ -91,18 +94,6 @@ func computeJitter(samples []float64) float64 {
 	variance /= float64(len(samples) - 1)
 
 	return math.Sqrt(variance)
-}
-
-// computeMean computes the mean of samples
-func computeMean(samples []float64) float64 {
-	if len(samples) == 0 {
-		return 0
-	}
-	sum := 0.0
-	for _, s := range samples {
-		sum += s
-	}
-	return sum / float64(len(samples))
 }
 
 // floatPtr returns a pointer to a float64
@@ -301,13 +292,7 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 				url = fmt.Sprintf("%s/__up?bytes=%d", c.config.BaseURL, test.size)
 			}
 
-			// Run test with concurrency = 1 (sequential)
-			result := c.measureThroughput(
-				url,
-				c.config.DownloadDurationMs, // Use download duration for both
-				test.size,
-				1, // No concurrency - sequential
-			)
+			result := c.measureSingleFetch(url)
 
 			// Update metrics for this specific test
 			if testType == "download" {
@@ -346,7 +331,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyDownload(baseURL, server, colo
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.measureThroughput(downloadURL, durationMs, 100*1024, 1)
+		c.measureThroughput(downloadURL, durationMs)
 	}()
 
 	// Run latency tests
@@ -366,7 +351,7 @@ func (c *CloudflareSpeedtest) measureLoadedLatencyUpload(baseURL, server, colo s
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.measureThroughput(uploadURL, durationMs, 100*1024, 1)
+		c.measureThroughput(uploadURL, durationMs)
 	}()
 
 	// Run latency tests
@@ -566,64 +551,41 @@ func (c *CloudflareSpeedtest) measureLatency(url string, durationMs time.Duratio
 	return c.computeLatencySummary(samples)
 }
 
-// measureThroughput measures throughput to a URL
-func (c *CloudflareSpeedtest) measureThroughput(url string, durationMs time.Duration, bytesPerRequest int64, concurrency int) *model.ThroughputSummary {
-	startTime := time.Now()
-	endTime := startTime.Add(durationMs)
-
-	var mu sync.Mutex
-	bytesTotal := int64(0)
-	speeds := []float64{}
-
-	var wg sync.WaitGroup
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for time.Now().Before(endTime) {
-				start := time.Now()
-				resp, err := fetchWithTimeout(c.client, url, c.config.ProbeTimeoutMs)
-				if err != nil {
-					continue
-				}
-				data, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				elapsed := time.Since(start).Seconds()
-
-				mu.Lock()
-				bytesTotal += int64(len(data))
-				if elapsed > 0 {
-					bps := (float64(len(data)) * 8) / elapsed
-					speeds = append(speeds, bps)
-				}
-				mu.Unlock()
-			}
-		}()
+// measureSingleFetch performs a single HTTP fetch and returns a ThroughputSummary.
+func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSummary {
+	start := time.Now()
+	resp, err := fetchWithTimeout(c.client, url, 60*time.Second)
+	if err != nil {
+		return &model.ThroughputSummary{}
 	}
+	data, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	dur := time.Since(start)
+	elapsed := dur.Seconds()
 
-	wg.Wait()
-
-	actualDuration := time.Since(startTime).Milliseconds()
-	if actualDuration <= 0 {
-		actualDuration = 1
-	}
-
-	totalMbps := (float64(bytesTotal) * 8) / (float64(actualDuration) * 1000)
-
-	// Convert speeds from bps to Mbps
-	mbpsSpeeds := make([]float64, len(speeds))
-	for i, s := range speeds {
-		mbpsSpeeds[i] = s / 1000000
+	bytes := int64(len(data))
+	mbps := 0.0
+	if elapsed > 0 {
+		mbps = (float64(bytes) * 8) / (elapsed * 1_000_000)
 	}
 
 	return &model.ThroughputSummary{
-		Bytes:        bytesTotal,
-		DurationMs:   actualDuration,
-		Mbps:         totalMbps,
-		MeanMbps:     floatPtr(computeMedian(mbpsSpeeds)),
-		MedianMbps:   floatPtr(computeMedian(mbpsSpeeds)),
-		P25Mbps:      floatPtr(computePercentile(mbpsSpeeds, 0.25)),
-		P75Mbps:      floatPtr(computePercentile(mbpsSpeeds, 0.75)),
+		Bytes:      bytes,
+		DurationMs: dur.Milliseconds(),
+		Mbps:       mbps,
+	}
+}
+
+// measureThroughput fetches url in a loop for the given duration (used for loaded latency background load).
+func (c *CloudflareSpeedtest) measureThroughput(url string, duration time.Duration) {
+	endTime := time.Now().Add(duration)
+	for time.Now().Before(endTime) {
+		resp, err := fetchWithTimeout(c.client, url, duration)
+		if err != nil {
+			continue
+		}
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
 	}
 }
 

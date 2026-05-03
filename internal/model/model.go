@@ -16,13 +16,9 @@ type LatencySummary struct {
 
 // ThroughputSummary contains throughput test statistics
 type ThroughputSummary struct {
-	Bytes        int64   `json:"bytes"`
-	DurationMs   int64   `json:"duration_ms"`
-	Mbps         float64 `json:"mbps"`
-	MeanMbps     *float64 `json:"mean_mbps,omitempty"`
-	MedianMbps   *float64 `json:"median_mbps,omitempty"`
-	P25Mbps      *float64 `json:"p25_mbps,omitempty"`
-	P75Mbps      *float64 `json:"p75_mbps,omitempty"`
+	Bytes      int64   `json:"bytes"`
+	DurationMs int64   `json:"duration_ms"`
+	Mbps       float64 `json:"mbps"`
 }
 
 // DnsSummary contains DNS resolution statistics
