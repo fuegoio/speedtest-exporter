@@ -13,9 +13,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/alexis/speedtest-exporter/internal/config"
-	"github.com/alexis/speedtest-exporter/internal/engine"
-	"github.com/alexis/speedtest-exporter/internal/metrics"
+	"github.com/fuegoio/speedtest-exporter/internal/config"
+	"github.com/fuegoio/speedtest-exporter/internal/engine"
+	"github.com/fuegoio/speedtest-exporter/internal/metrics"
 )
 
 // SpeedtestExporter is the main exporter struct
@@ -99,6 +99,8 @@ func (e *SpeedtestExporter) Start() error {
 	// Start periodic tests
 	e.startPeriodicTests()
 
+	log.Printf("Speedtest Exporter started successfully. Initial test will run immediately.")
+
 	return nil
 }
 
@@ -131,11 +133,11 @@ func (e *SpeedtestExporter) startPeriodicTests() {
 
 // runTest runs a single speed test
 func (e *SpeedtestExporter) runTest() {
-	log.Printf("Running speed test at %s", time.Now().Format(time.RFC3339))
+	log.Printf("=== Starting speed test at %s ===", time.Now().Format(time.RFC3339))
 
 	result, err := e.speedtest.RunDirectTest()
 	if err != nil {
-		log.Printf("Test failed: %v", err)
+		log.Printf("=== Test failed: %v ===", err)
 		metrics.IncrementError(err.Error())
 		metrics.IncrementRun("failed")
 		return
@@ -143,7 +145,7 @@ func (e *SpeedtestExporter) runTest() {
 
 	metrics.UpdateMetrics(result)
 	log.Printf(
-		"Test completed: Download=%.2f Mbps, Upload=%.2f Mbps",
+		"=== Test completed: Download=%.2f Mbps, Upload=%.2f Mbps ===",
 		result.Download.Mbps,
 		result.Upload.Mbps,
 	)

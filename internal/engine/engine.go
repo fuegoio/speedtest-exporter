@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -17,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alexis/speedtest-exporter/internal/config"
-	"github.com/alexis/speedtest-exporter/internal/model"
+	"github.com/fuegoio/speedtest-exporter/internal/config"
+	"github.com/fuegoio/speedtest-exporter/internal/model"
 )
 
 // NetworkInfo contains network information from external services
@@ -108,6 +109,22 @@ func computeMean(samples []float64) float64 {
 // floatPtr returns a pointer to a float64
 func floatPtr(f float64) *float64 {
 	return &f
+}
+
+// derefString returns the value or default if nil
+func derefString(s *string, defaultValue string) string {
+	if s != nil {
+		return *s
+	}
+	return defaultValue
+}
+
+// derefFloat64 returns the value or default if nil
+func derefFloat64(f *float64, defaultValue float64) float64 {
+	if f != nil {
+		return *f
+	}
+	return defaultValue
 }
 
 // fetchNetworkInfo fetches network info from external services
@@ -298,18 +315,25 @@ func NewCloudflareSpeedtest(cfg config.ExporterConfig) *CloudflareSpeedtest {
 // RunDirectTest runs a direct speed test
 func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 	measID := generateMeasID()
+	log.Printf("[Speedtest] Starting test with measurement ID: %s", measID)
 
 	// Get network info
+	log.Printf("[Speedtest] Fetching network information...")
 	networkInfo := fetchNetworkInfo()
 	localIpv4, localIpv6, interfaceName, networkName := getLocalNetworkInfo()
+	log.Printf("[Speedtest] Local IPv4: %s, IPv6: %s, Interface: %s, Network: %s",
+		localIpv4, localIpv6, interfaceName, networkName)
 
 	// Get server and colo info
+	log.Printf("[Speedtest] Getting server and colo information...")
 	server, colo, err := getServerAndColo(c.config.BaseURL, c.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get server info: %w", err)
 	}
+	log.Printf("[Speedtest] Server: %s, Colo: %s", server, colo)
 
 	// Get external IP
+	log.Printf("[Speedtest] Getting external IP...")
 	externalIP, err := getExternalIP(c.config.BaseURL, c.client)
 	if err != nil {
 		// Use networkInfo as fallback
@@ -317,54 +341,84 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 			externalIP = *networkInfo.ExternalIPv4
 		}
 	}
+	log.Printf("[Speedtest] External IP: %s", externalIP)
 
 	// Run idle latency test
+	log.Printf("[Speedtest] Measuring idle latency for %v...", c.config.IdleLatencyDurationMs)
 	idleLatency := c.measureLatency(
 		c.config.BaseURL+"/__latency",
 		c.config.IdleLatencyDurationMs,
 		c.config.ProbeIntervalMs,
 	)
+	log.Printf("[Speedtest] Idle latency: median=%.2fms, min=%.2fms, max=%.2fms, loss=%.2f%%",
+		derefFloat64(idleLatency.MedianMs, 0), derefFloat64(idleLatency.MinMs, 0), derefFloat64(idleLatency.MaxMs, 0), idleLatency.Loss*100)
 
 	// Run download test
+	log.Printf("[Speedtest] Measuring download speed for %v with %d concurrent connections...",
+		c.config.DownloadDurationMs, c.config.Concurrency)
 	download := c.measureThroughput(
 		c.config.BaseURL+"/__down",
 		c.config.DownloadDurationMs,
 		c.config.DownloadBytesPerReq,
 		c.config.Concurrency,
 	)
+	log.Printf("[Speedtest] Download: %.2f Mbps (%d bytes in %v)",
+		download.Mbps, download.Bytes, time.Duration(download.DurationMs)*time.Millisecond)
 
 	// Run upload test
+	log.Printf("[Speedtest] Measuring upload speed for %v with %d concurrent connections...",
+		c.config.UploadDurationMs, c.config.Concurrency)
 	upload := c.measureThroughput(
 		c.config.BaseURL+"/__up",
 		c.config.UploadDurationMs,
 		c.config.UploadBytesPerReq,
 		c.config.Concurrency,
 	)
+	log.Printf("[Speedtest] Upload: %.2f Mbps (%d bytes in %v)",
+		upload.Mbps, upload.Bytes, time.Duration(upload.DurationMs)*time.Millisecond)
 
 	// Measure loaded latency during download
+	log.Printf("[Speedtest] Measuring loaded latency during download...")
 	loadedLatencyDownload := c.measureLatency(
 		c.config.BaseURL+"/__latency?phase=download",
 		c.config.DownloadDurationMs,
 		c.config.ProbeIntervalMs,
 	)
+	log.Printf("[Speedtest] Loaded latency (download): median=%.2fms, loss=%.2f%%",
+		derefFloat64(loadedLatencyDownload.MedianMs, 0), loadedLatencyDownload.Loss*100)
 
 	// Measure loaded latency during upload
+	log.Printf("[Speedtest] Measuring loaded latency during upload...")
 	loadedLatencyUpload := c.measureLatency(
 		c.config.BaseURL+"/__latency?phase=upload",
 		c.config.UploadDurationMs,
 		c.config.ProbeIntervalMs,
 	)
+	log.Printf("[Speedtest] Loaded latency (upload): median=%.2fms, loss=%.2f%%",
+		derefFloat64(loadedLatencyUpload.MedianMs, 0), loadedLatencyUpload.Loss*100)
 
 	// DNS measurement
 	var dns *model.DnsSummary
 	if !c.config.SkipDiagnostics {
+		log.Printf("[Speedtest] Measuring DNS resolution...")
 		dns = c.measureDns()
+		if dns != nil {
+			log.Printf("[Speedtest] DNS: %s resolved in %.2fms (%d IPv4, %d IPv6)",
+				dns.Hostname, dns.ResolutionTimeMs, dns.Ipv4Count, dns.Ipv6Count)
+		}
 	}
 
 	// TLS measurement
 	var tls *model.TlsSummary
 	if !c.config.SkipDiagnostics {
+		log.Printf("[Speedtest] Measuring TLS handshake...")
 		tls = c.measureTls()
+		if tls != nil {
+			log.Printf("[Speedtest] TLS: %s/%s handshake in %.2fms",
+				derefString(tls.ProtocolVersion, "unknown"),
+				derefString(tls.CipherSuite, "unknown"),
+				tls.HandshakeTimeMs)
+		}
 	}
 
 	// Build result
@@ -384,6 +438,8 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 		Dns:                  dns,
 		Tls:                  tls,
 	}
+
+	log.Printf("[Speedtest] Test completed successfully with measurement ID: %s", measID)
 
 	// Set network info with config overrides
 	if c.config.Asn != nil {

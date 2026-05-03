@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/alexis/speedtest-exporter/internal/model"
+	"github.com/fuegoio/speedtest-exporter/internal/model"
 )
 
 // Metrics holds all Prometheus metrics

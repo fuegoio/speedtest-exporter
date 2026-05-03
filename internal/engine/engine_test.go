@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/alexis/speedtest-exporter/internal/config"
-	"github.com/alexis/speedtest-exporter/internal/model"
+	"github.com/fuegoio/speedtest-exporter/internal/config"
+	"github.com/fuegoio/speedtest-exporter/internal/model"
 )
 
 func TestGenerateMeasID(t *testing.T) {

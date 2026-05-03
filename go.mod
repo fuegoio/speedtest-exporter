@@ -1,4 +1,4 @@
-module github.com/alexis/speedtest-exporter
+module github.com/fuegoio/speedtest-exporter
 
 go 1.22
 
