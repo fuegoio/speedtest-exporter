@@ -15,69 +15,103 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 ## Metrics
 
+### Common Labels
+
+Most metrics share a common set of labels that describe the test context:
+
+| Label         | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
+| `server`      | Hostname of the speed test server                                           |
+| `colo`        | Cloudflare colocation (PoP) code closest to the server                      |
+| `asn`         | Autonomous System Number of the client's network                            |
+| `as_org`      | Name of the AS organization (ISP)                                           |
+| `interface`   | Network interface name used for the test (overridable via `INTERFACE_NAME`) |
+| `network`     | Logical network name (overridable via `NETWORK_NAME`)                       |
+| `ip_version`  | IP version used: `ipv4`, `ipv6`, or `both`                                  |
+| `country`     | Country of the server                                                       |
+| `city`        | City of the server                                                          |
+| `region`      | Region of the server                                                        |
+| `postal_code` | Postal code of the server                                                   |
+| `latitude`    | Latitude of the server                                                      |
+| `longitude`   | Longitude of the server                                                     |
+
 ### Download Metrics
 
-| Metric                           | Labels                                                          | Description                                           |
-| -------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| `speedtest_download_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Download speed in Mbps (histogram)                    |
-| `speedtest_download_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of download test in milliseconds (histogram) |
+| Metric                    | Additional Labels | Description                        |
+| ------------------------- | ----------------- | ---------------------------------- |
+| `speedtest_download_mbps` | `size`            | Download speed in Mbps (histogram) |
 
-**Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
+- `size`: payload size used for the measurement (e.g. `max`)
+
+**Note**: Histogram metric. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Upload Metrics
 
-| Metric                         | Labels                                                          | Description                                         |
-| ------------------------------ | --------------------------------------------------------------- | --------------------------------------------------- |
-| `speedtest_upload_mbps`        | server, colo, asn, as_org, interface, network, ip_version, size | Upload speed in Mbps (histogram)                    |
-| `speedtest_upload_duration_ms` | server, colo, asn, as_org, interface, network, ip_version, size | Duration of upload test in milliseconds (histogram) |
+| Metric                  | Additional Labels | Description                      |
+| ----------------------- | ----------------- | -------------------------------- |
+| `speedtest_upload_mbps` | `size`            | Upload speed in Mbps (histogram) |
 
-**Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
+- `size`: payload size used for the measurement (e.g. `max`)
+
+**Note**: Histogram metric. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Latency Metrics
 
-| Metric                           | Labels                                                                        | Description                                    |
-| -------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
-| `speedtest_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, during             | Latency in milliseconds (histogram)            |
-| `speedtest_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version, during             | Latency jitter in milliseconds (histogram)     |
-| `speedtest_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version, during             | Packet loss percentage (histogram)             |
+| Metric                           | Additional Labels | Description                         |
+| -------------------------------- | ----------------- | ----------------------------------- |
+| `speedtest_latency_ms`           | `during`          | Latency in milliseconds (histogram) |
+| `speedtest_latency_jitter_ms`    | `during`          | Jitter in milliseconds (histogram)  |
+| `speedtest_latency_loss_percent` | `during`          | Packet loss percentage (histogram)  |
 
-The `during` label is `idle`, `download`, or `upload`.
+- `during`: phase of the test when the measurement was taken — `idle`, `download`, or `upload`
 
-**Note**: All three latency metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
+**Note**: Histogram metrics. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### DNS Metrics
 
-| Metric                             | Labels               | Description                                                        |
-| ---------------------------------- | -------------------- | ------------------------------------------------------------------ |
-| `speedtest_dns_resolution_time_ms` | hostname, dns_server | DNS resolution time in milliseconds (histogram over 10 runs)       |
+| Metric                             | Labels                   | Description                                                  |
+| ---------------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `speedtest_dns_resolution_time_ms` | `hostname`, `dns_server` | DNS resolution time in milliseconds (histogram over 10 runs) |
 
-**Note**: `speedtest_dns_resolution_time_ms` is a histogram. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
+DNS metrics do not carry the common labels.
+
+- `hostname`: the hostname being resolved
+- `dns_server`: comma-separated list of DNS servers used
+
+**Note**: Histogram metric. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### TLS Metrics
 
-| Metric                            | Labels                 | Description                                                  |
-| --------------------------------- | ---------------------- | ------------------------------------------------------------ |
-| `speedtest_tls_handshake_time_ms` | protocol, cipher_suite | TLS handshake time in milliseconds (histogram over 10 runs)  |
+| Metric                            | Labels                     | Description                                                 |
+| --------------------------------- | -------------------------- | ----------------------------------------------------------- |
+| `speedtest_tls_handshake_time_ms` | `protocol`, `cipher_suite` | TLS handshake time in milliseconds (histogram over 10 runs) |
 
-**Note**: `speedtest_tls_handshake_time_ms` is a histogram. Each test run contributes 10 observations (one per handshake). Use `histogram_quantile()` in PromQL for percentile calculations.
+TLS metrics do not carry the common labels.
+
+- `protocol`: TLS protocol version negotiated (e.g. `TLSv1.3`)
+- `cipher_suite`: cipher suite negotiated (e.g. `TLS_AES_128_GCM_SHA256`)
+
+**Note**: Histogram metric. Each test run contributes 10 observations. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### Network Information Metrics
 
-| Metric                    | Labels  | Description                          |
-| ------------------------- | ------- | ------------------------------------ |
-| `speedtest_local_ipv4`    | address | Local IPv4 address (1 if present)    |
-| `speedtest_local_ipv6`    | address | Local IPv6 address (1 if present)    |
-| `speedtest_external_ipv4` | address | External IPv4 address (1 if present) |
-| `speedtest_external_ipv6` | address | External IPv6 address (1 if present) |
+| Metric                    | Labels    | Description                          |
+| ------------------------- | --------- | ------------------------------------ |
+| `speedtest_local_ipv4`    | `address` | Local IPv4 address (1 if present)    |
+| `speedtest_local_ipv6`    | `address` | Local IPv6 address (1 if present)    |
+| `speedtest_external_ipv4` | `address` | External IPv4 address (1 if present) |
+| `speedtest_external_ipv6` | `address` | External IPv6 address (1 if present) |
+
+- `address`: the IP address as a string
 
 ### Test Metadata
 
-| Metric                             | Description                                                   |
-| ---------------------------------- | ------------------------------------------------------------- |
-| `speedtest_test_timestamp`         | Timestamp of last test in Unix seconds                        |
-| `speedtest_test_duration_total_ms` | Total duration of last test in milliseconds                   |
-| `speedtest_test_errors_total`      | Total number of test errors (labeled by error_type)           |
-| `speedtest_test_runs_total`        | Total number of test runs (labeled by status: success/failed) |
+| Metric                             | Labels       | Description                                       |
+| ---------------------------------- | ------------ | ------------------------------------------------- |
+| `speedtest_test_timestamp`         | —            | Timestamp of last test in Unix seconds            |
+| `speedtest_test_duration_total_ms` | —            | Total duration of last test in milliseconds       |
+| `speedtest_test_errors_total`      | `error_type` | Total number of test errors, by error type        |
+| `speedtest_test_runs_total`        | `status`     | Total number of test runs (`success` or `failed`) |
 
 ## Quick Start
 
