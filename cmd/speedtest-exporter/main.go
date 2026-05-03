@@ -106,11 +106,6 @@ func (e *SpeedtestExporter) Start() error {
 
 // startPeriodicTests starts the periodic speed tests
 func (e *SpeedtestExporter) startPeriodicTests() {
-	if e.running {
-		return
-	}
-	e.running = true
-
 	log.Printf("Starting periodic speed tests every %v", e.config.TestIntervalMs)
 
 	// Run initial test immediately
