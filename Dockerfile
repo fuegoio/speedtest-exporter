@@ -1,13 +1,13 @@
 # Syntax: docker/dockerfile:1.4
-# Lightweight multi-stage build for speedtest-exporter
+# Lightweight build for speedtest-exporter using Bun compile
 
-# Stage 1: Build with Bun alpine image
+# Build stage: Compile with Bun
 FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 # Install production dependencies only
 RUN bun install --production
@@ -15,43 +15,37 @@ RUN bun install --production
 # Copy application code
 COPY src/ ./src/
 
-# Stage 2: Ultra-lightweight runtime image
+# Compile the application to a standalone executable
+# --compile bundles the Bun runtime and all dependencies into a single binary
+RUN bun build --compile --outdir /app/dist src/index.ts
+
+# Final stage: Minimal runtime image
 FROM alpine:3.20
 
-# Install minimal dependencies
-RUN apk add --no-cache \
-    curl \
-    dumb-init \
-    libgcc \
-    && rm -rf /var/cache/apk/*
+# Install only curl for health check
+RUN apk add --no-cache curl && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
-# Install Bun (static binary, ~50MB)
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-linux-x64" > /dev/null 2>&1 \
-    && mv /root/.bun/bin/bun /usr/local/bin/bun \
-    && rm -rf /root/.bun
+# Copy the compiled standalone executable from builder stage
+COPY --from=builder /app/dist/index /app/speedtest-exporter
 
-# Copy from builder stage
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src/ ./src/
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/bun.lockb ./
+# Make executable
+RUN chmod +x /app/speedtest-exporter
 
 # Create non-root user for security
 RUN adduser -D appuser
 USER appuser
 
-# Ensure node_modules has correct permissions
-RUN chown -R appuser:appuser /app
+# Ensure binary has correct permissions
+RUN chown appuser:appuser /app/speedtest-exporter
 
 # Expose port
 EXPOSE 9537
 
-# Health check
+# Health check - curl the HTTP endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:9537/health || exit 1
 
-# Run the application with dumb-init for proper signal handling
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["bun", "run", "--production", "src/index.ts"]
+# Run the compiled standalone binary
+ENTRYPOINT ["/app/speedtest-exporter"]
