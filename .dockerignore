@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Node modules (will be installed in container)
+node_modules
+
+# Bun lockfile (will be copied)
+# bun.lockb is needed, keep it
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Documentation
+README.md
+
+# TypeScript config (not needed in production)
+tsconfig.json
+
+# GitHub
+.github
+
+# Build artifacts
+dist
+build
+
+# Test
+coverage
+
+# Local development files
+*.tsbuildinfo
