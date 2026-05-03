@@ -1,204 +1,203 @@
 # Speedtest Exporter
 
-A Bun-powered Prometheus exporter for network performance metrics. This exporter runs periodic speed tests against Cloudflare's speed test infrastructure (`speed.cloudflare.com`) and exposes comprehensive metrics in Prometheus format.
+A Prometheus exporter for Cloudflare speedtest metrics, written in Go. This exporter runs periodic speed tests against Cloudflare's speed test endpoints and exposes the results as Prometheus metrics.
 
-While it uses Cloudflare's public speed test endpoints as the default target, the exporter measures general network performance metrics including throughput, latency, packet loss, DNS resolution, and TLS handshake times.
+## Features
 
-## Metrics Exposed
+- **Download/Upload Speed**: Measures download and upload speeds in Mbps
+- **Latency Tests**: Measures idle latency, loaded latency (during download/upload)
+- **DNS Resolution**: Measures DNS resolution time and IP counts
+- **TLS Handshake**: Measures TLS handshake time and protocol/cipher info
+- **Network Information**: Captures local/external IPs, ASN, ISP info
+- **Prometheus Metrics**: Exposes all data as Prometheus-compatible metrics
 
-All metrics are prefixed with `speedtest_` for easy filtering in Prometheus.
+## Quick Start
 
-### Throughput Metrics
-
-- `speedtest_download_mbps` - Download speed in Mbps
-- `speedtest_download_bytes_total` - Total bytes downloaded
-- `speedtest_download_duration_ms` - Download test duration
-- `speedtest_upload_mbps` - Upload speed in Mbps
-- `speedtest_upload_bytes_total` - Total bytes uploaded
-- `speedtest_upload_duration_ms` - Upload test duration
-
-### Latency Metrics
-
-- `speedtest_idle_latency_ms` - Current idle latency
-- `speedtest_idle_latency_min_ms` - Minimum idle latency
-- `speedtest_idle_latency_mean_ms` - Mean idle latency
-- `speedtest_idle_latency_median_ms` - Median idle latency
-- `speedtest_idle_latency_p25_ms` - 25th percentile idle latency
-- `speedtest_idle_latency_p75_ms` - 75th percentile idle latency
-- `speedtest_idle_latency_max_ms` - Maximum idle latency
-- `speedtest_idle_latency_jitter_ms` - Idle latency jitter
-- `speedtest_loaded_latency_download_*` - Latency during download
-- `speedtest_loaded_latency_upload_*` - Latency during upload
-
-### Packet Loss Metrics
-
-- `speedtest_idle_latency_loss_percent` - Packet loss during idle test
-- `speedtest_loaded_latency_download_loss_percent` - Packet loss during download
-- `speedtest_loaded_latency_upload_loss_percent` - Packet loss during upload
-
-### Diagnostic Metrics
-
-- `speedtest_dns_resolution_time_ms` - DNS resolution time
-- `speedtest_dns_ipv4_count` - Number of IPv4 addresses resolved
-- `speedtest_dns_ipv6_count` - Number of IPv6 addresses resolved
-- `speedtest_tls_handshake_time_ms` - TLS handshake time
-
-### Traceroute Metrics
-
-- `speedtest_traceroute_hops_count` - Number of hops
-- `speedtest_traceroute_completed` - Whether traceroute completed
-
-### Network Information
-
-- `speedtest_local_ipv4` - Local IPv4 address presence
-- `speedtest_local_ipv6` - Local IPv6 address presence
-- `speedtest_external_ipv4` - External IPv4 address presence
-- `speedtest_external_ipv6` - External IPv6 address presence
-
-### Test Metadata
-
-- `speedtest_test_timestamp` - Timestamp of last test
-- `speedtest_test_duration_total_ms` - Total test duration
-- `speedtest_test_runs_total` - Total test runs (with status label)
-- `speedtest_test_errors_total` - Total test errors (with error_type label)
-
-## Installation
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) runtime installed
-- Node.js 18+ (for development)
-
-### Quick Start
+### Using Docker
 
 ```bash
-# Install dependencies
-bun install
+# Run with default configuration
+docker run -d -p 9537:9537 --name speedtest-exporter ghcr.io/alexis/speedtest-exporter:latest
 
-# Start the exporter
-bun run start
-```
-
-### Docker
-
-The project includes a production-ready multi-stage Dockerfile that uses Alpine Linux for a minimal footprint.
-
-Build and run:
-
-```bash
+# Or build from source
 docker build -t speedtest-exporter .
-docker run -p 9537:9537 -e TEST_INTERVAL_MS=60000 speedtest-exporter
+docker run -d -p 9537:9537 --name speedtest-exporter speedtest-exporter
 ```
+
+### Using Go
+
+```bash
+# Build and run
+go build ./cmd/speedtest-exporter/
+./speedtest-exporter
+
+# Or install
+go install ./cmd/speedtest-exporter/
+```
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/metrics` | Prometheus metrics |
+| `/health` | Health check (returns "OK") |
+| `/run` | Manually trigger a speed test |
+| `/` | Help text with endpoint list |
 
 ## Configuration
 
 All configuration is done via environment variables:
 
-| Variable                   | Default                      | Description                      |
-| -------------------------- | ---------------------------- | -------------------------------- |
-| `PORT`                     | 9537                         | HTTP server port                 |
-| `TEST_INTERVAL_MS`         | 3600000 (1 hour)             | Test frequency in milliseconds   |
-| `BASE_URL`                 | https://speed.cloudflare.com | Cloudflare speedtest base URL    |
-| `DOWNLOAD_DURATION_MS`     | 10000                        | Download test duration           |
-| `UPLOAD_DURATION_MS`       | 10000                        | Upload test duration             |
-| `IDLE_LATENCY_DURATION_MS` | 2000                         | Idle latency test duration       |
-| `CONCURRENCY`              | 6                            | Number of concurrent connections |
-| `DOWNLOAD_BYTES_PER_REQ`   | 10000000                     | Bytes per download request       |
-| `UPLOAD_BYTES_PER_REQ`     | 5000000                      | Bytes per upload request         |
-| `PROBE_INTERVAL_MS`        | 250                          | Probe interval for latency tests |
-| `PROBE_TIMEOUT_MS`         | 800                          | Probe timeout                    |
-| `SKIP_DIAGNOSTICS`         | false                        | Skip DNS/TLS diagnostics         |
-| `TRACEROUTE`               | false                        | Run traceroute                   |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 9537 | HTTP server port |
+| `BASE_URL` | https://speed.cloudflare.com | Cloudflare speedtest base URL |
+| `TEST_INTERVAL_MS` | 3600000 (1 hour) | Interval between tests in milliseconds |
+| `DOWNLOAD_DURATION_MS` | 10000 (10s) | Download test duration |
+| `UPLOAD_DURATION_MS` | 10000 (10s) | Upload test duration |
+| `IDLE_LATENCY_DURATION_MS` | 2000 (2s) | Idle latency test duration |
+| `CONCURRENCY` | 6 | Number of concurrent requests for throughput tests |
+| `DOWNLOAD_BYTES_PER_REQ` | 10000000 (10MB) | Bytes per download request |
+| `UPLOAD_BYTES_PER_REQ` | 5000000 (5MB) | Bytes per upload request |
+| `PROBE_INTERVAL_MS` | 250 | Interval between latency probes |
+| `PROBE_TIMEOUT_MS` | 800 | Timeout for individual probes |
+| `SKIP_DIAGNOSTICS` | false | Skip DNS and TLS diagnostics |
+| `TRACEROUTE` | false | Enable traceroute (not implemented) |
+| `ASN` | - | Override ASN |
+| `AS_ORG` | - | Override AS organization |
+| `INTERFACE_NAME` | - | Override interface name |
+| `NETWORK_NAME` | - | Override network name |
+| `LOCAL_IPV4` | - | Override local IPv4 |
+| `LOCAL_IPV6` | - | Override local IPv6 |
+| `EXTERNAL_IPV4` | - | Override external IPv4 |
+| `EXTERNAL_IPV6` | - | Override external IPv6 |
 
-### Network Information
-
-Network information (ASN, AS organization, local/external IPs, interface details) is **automatically fetched** from external services and the local system. The exporter uses:
-
-- **ifconfig.co** - Primary source for ASN, AS organization, and external IP addresses
-- **api.ipify.org** - Fallback for external IPv4 address
-- **api6.ipify.org** - Fallback for external IPv6 address
-- **OS network interfaces** - Local IP addresses and interface information
-
-If you need to override any of these values (e.g., in a containerized environment), you can still use the following environment variables:
-
-| Variable         | Description                  |
-| ---------------- | ---------------------------- |
-| `ASN`            | ASN for labeling metrics     |
-| `AS_ORG`         | AS organization for labeling |
-| `INTERFACE_NAME` | Network interface name       |
-| `NETWORK_NAME`   | Network name                 |
-| `LOCAL_IPV4`     | Local IPv4 address           |
-| `LOCAL_IPV6`     | Local IPv6 address           |
-| `EXTERNAL_IPV4`  | External IPv4 address        |
-| `EXTERNAL_IPV6`  | External IPv6 address        |
-
-## Usage
-
-### Start the exporter
+### Example with custom configuration
 
 ```bash
-bun run start
+docker run -d -p 9537:9537 \
+  -e TEST_INTERVAL_MS=300000 \  # 5 minutes
+  -e CONCURRENCY=4 \
+  -e DOWNLOAD_DURATION_MS=5000 \
+  --name speedtest-exporter \
+  speedtest-exporter
 ```
 
-### Start with custom interval (1 minute)
+## Metrics
 
-```bash
-TEST_INTERVAL_MS=60000 bun run start
-```
+### Download Metrics
 
-### Start on custom port
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_download_mbps` | server, colo, asn, as_org, interface, network, ip_version | Current download speed in Mbps |
+| `speedtest_download_bytes_total` | server, colo, asn, as_org | Total bytes downloaded in last test |
+| `speedtest_download_duration_ms` | server, colo | Duration of download test in milliseconds |
 
-```bash
-PORT=8080 bun run start
-```
+### Upload Metrics
 
-### Access metrics
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_upload_mbps` | server, colo, asn, as_org, interface, network, ip_version | Current upload speed in Mbps |
+| `speedtest_upload_bytes_total` | server, colo, asn, as_org | Total bytes uploaded in last test |
+| `speedtest_upload_duration_ms` | server, colo | Duration of upload test in milliseconds |
 
-- Prometheus metrics: `http://localhost:9537/metrics`
-- Health check: `http://localhost:9537/health`
-- Manual test trigger: `http://localhost:9537/run`
+### Latency Metrics (Idle)
 
-### Prometheus Configuration
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_idle_latency_ms` | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds |
+| `speedtest_idle_latency_min_ms` | server, colo | Minimum idle latency |
+| `speedtest_idle_latency_mean_ms` | server, colo | Mean idle latency |
+| `speedtest_idle_latency_median_ms` | server, colo | Median idle latency |
+| `speedtest_idle_latency_p25_ms` | server, colo | 25th percentile idle latency |
+| `speedtest_idle_latency_p75_ms` | server, colo | 75th percentile idle latency |
+| `speedtest_idle_latency_max_ms` | server, colo | Maximum idle latency |
+| `speedtest_idle_latency_jitter_ms` | server, colo | Idle latency jitter |
+| `speedtest_idle_latency_loss_percent` | server, colo | Packet loss percentage during idle latency test |
 
-Add to your `prometheus.yml`:
+### Loaded Latency Metrics (During Download/Upload)
+
+Similar metrics to idle latency but measured during download/upload tests:
+- `speedtest_loaded_latency_download_*`
+- `speedtest_loaded_latency_upload_*`
+
+### DNS Metrics
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_dns_resolution_time_ms` | hostname, dns_server | DNS resolution time in milliseconds |
+| `speedtest_dns_ipv4_count` | hostname | Number of IPv4 addresses resolved |
+| `speedtest_dns_ipv6_count` | hostname | Number of IPv6 addresses resolved |
+
+### TLS Metrics
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_tls_handshake_time_ms` | protocol, cipher_suite | TLS handshake time in milliseconds |
+
+### Network Information Metrics
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `speedtest_local_ipv4` | address | Local IPv4 address (1 if present) |
+| `speedtest_local_ipv6` | address | Local IPv6 address (1 if present) |
+| `speedtest_external_ipv4` | address | External IPv4 address (1 if present) |
+| `speedtest_external_ipv6` | address | External IPv6 address (1 if present) |
+
+### Test Metadata
+
+| Metric | Description |
+|--------|-------------|
+| `speedtest_test_timestamp` | Timestamp of last test in Unix seconds |
+| `speedtest_test_duration_total_ms` | Total duration of last test in milliseconds |
+| `speedtest_test_errors_total` | Total number of test errors (labeled by error_type) |
+| `speedtest_test_runs_total` | Total number of test runs (labeled by status: success/failed) |
+
+## Prometheus Configuration
 
 ```yaml
 scrape_configs:
-  - job_name: "speedtest"
+  - job_name: 'speedtest'
     static_configs:
-      - targets: ["localhost:9537"]
+      - targets: ['localhost:9537']
     scrape_interval: 30s
+```
+
+## Project Structure
+
+```
+speedtest-exporter/
+├── cmd/
+│   └── speedtest-exporter/
+│       └── main.go          # Main entry point
+├── internal/
+│   ├── config/
+│   │   └── config.go        # Configuration loading
+│   ├── engine/
+│   │   └── engine.go        # Speedtest engine
+│   ├── metrics/
+│   │   └── metrics.go       # Prometheus metrics
+│   └── model/
+│       └── model.go         # Data models
+├── go.mod
+├── go.sum
+├── Dockerfile
+└── README.md
 ```
 
 ## Development
 
 ```bash
-# Install dependencies
-bun install
+# Run tests
+go test ./...
 
-# Run with hot reload
-bun run dev
+# Build
+go build ./cmd/speedtest-exporter/
 
-# Run type checking
-bun run typecheck
-
-# Run linting
-bun run lint
-
-# Run formatting
-bun run format
-
-# Run all tests
-bun run test
-
-# Run CI checks (lint, format, typecheck, test)
-bun run ci
+# Run locally
+PORT=9537 TEST_INTERVAL_MS=60000 ./speedtest-exporter
 ```
 
 ## License
 
-MIT
-
-## Inspiration
-
-This exporter is inspired by [cloudflare-speed-cli](https://github.com/kavehtehrani/cloudflare-speed-cli) and provides a Prometheus-compatible way to monitor network performance using Cloudflare's speed test infrastructure.
+MIT License

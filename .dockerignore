@@ -1,16 +1,6 @@
-# Git
-.git
-.gitignore
-
-# Node modules (will be installed in container)
-node_modules
-
-# Bun lockfile (will be copied)
-# bun.lockb is needed, keep it
-
 # IDE
-.idea
-.vscode
+.idea/
+.vscode/
 *.swp
 *.swo
 
@@ -18,28 +8,21 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# Docker
+Dockerfile
+docker-compose*
+.docker/
+
+# Git
+.git/
+.gitignore
+
+# Build output
+speedtest-exporter
+
 # Logs
 *.log
 
-# Environment files
-.env
-.env.*
-
-# Documentation
-README.md
-
-# TypeScript config (not needed in production)
-tsconfig.json
-
-# GitHub
-.github
-
-# Build artifacts
-dist
-build
-
-# Test
-coverage
-
-# Local development files
-*.tsbuildinfo
+# Test output
+coverage.txt
+profile.out
