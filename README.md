@@ -35,15 +35,15 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 ### Latency Metrics
 
-| Metric                           | Labels                                                                        | Description                              |
-| -------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------- |
-| `speedtest_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, during             | Latency in milliseconds (histogram)      |
-| `speedtest_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version, during             | Latency jitter                           |
-| `speedtest_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version, during             | Packet loss percentage                   |
+| Metric                           | Labels                                                                        | Description                                    |
+| -------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| `speedtest_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, during             | Latency in milliseconds (histogram)            |
+| `speedtest_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version, during             | Latency jitter in milliseconds (histogram)     |
+| `speedtest_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version, during             | Packet loss percentage (histogram)             |
 
 The `during` label is `idle`, `download`, or `upload`.
 
-**Note**: `speedtest_latency_ms` is a histogram metric. Percentiles (p50, p75, p90, p95, p99) are automatically available through Prometheus histogram functions.
+**Note**: All three latency metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
 
 ### DNS Metrics
 

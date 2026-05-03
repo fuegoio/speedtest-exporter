@@ -21,6 +21,11 @@ var throughputBuckets = []float64{
 	0.01, 0.1, 1, 5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000,
 }
 
+// Histogram buckets for packet loss (in percent)
+var lossBuckets = []float64{
+	0.1, 0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100,
+}
+
 // Metrics holds all Prometheus metrics
 var (
 	// Download histogram (replaces DownloadMbps gauge)
@@ -53,19 +58,21 @@ var (
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"},
 	)
 
-	LatencyJitterMs = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_latency_jitter_ms",
-			Help: "Latency jitter in milliseconds",
+	LatencyJitterMs = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_latency_jitter_ms",
+			Help:    "Latency jitter in milliseconds (histogram)",
+			Buckets: latencyBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"},
 	)
 
 	// Packet loss metrics
-	LatencyLossPercent = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "speedtest_latency_loss_percent",
-			Help: "Packet loss percentage",
+	LatencyLossPercent = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "speedtest_latency_loss_percent",
+			Help:    "Packet loss percentage (histogram)",
+			Buckets: lossBuckets,
 		},
 		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"},
 	)
@@ -221,16 +228,16 @@ func UpdateMetrics(result *model.RunResult) {
 
 	// Latency metrics
 	LatencyMs.WithLabelValues(append(baseGeo, "idle")...).Observe(derefFloat64(result.IdleLatency.MedianMs, 0))
-	LatencyJitterMs.WithLabelValues(append(baseGeo, "idle")...).Set(derefFloat64(result.IdleLatency.JitterMs, 0))
-	LatencyJitterMs.WithLabelValues(append(baseGeo, "download")...).Set(derefFloat64(result.LoadedLatencyDownload.JitterMs, 0))
-	LatencyJitterMs.WithLabelValues(append(baseGeo, "upload")...).Set(derefFloat64(result.LoadedLatencyUpload.JitterMs, 0))
-	LatencyLossPercent.WithLabelValues(append(baseGeo, "idle")...).Set(result.IdleLatency.Loss * 100)
+	LatencyJitterMs.WithLabelValues(append(baseGeo, "idle")...).Observe(derefFloat64(result.IdleLatency.JitterMs, 0))
+	LatencyJitterMs.WithLabelValues(append(baseGeo, "download")...).Observe(derefFloat64(result.LoadedLatencyDownload.JitterMs, 0))
+	LatencyJitterMs.WithLabelValues(append(baseGeo, "upload")...).Observe(derefFloat64(result.LoadedLatencyUpload.JitterMs, 0))
+	LatencyLossPercent.WithLabelValues(append(baseGeo, "idle")...).Observe(result.IdleLatency.Loss * 100)
 
 	LatencyMs.WithLabelValues(append(baseGeo, "download")...).Observe(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
-	LatencyLossPercent.WithLabelValues(append(baseGeo, "download")...).Set(result.LoadedLatencyDownload.Loss * 100)
+	LatencyLossPercent.WithLabelValues(append(baseGeo, "download")...).Observe(result.LoadedLatencyDownload.Loss * 100)
 
 	LatencyMs.WithLabelValues(append(baseGeo, "upload")...).Observe(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
-	LatencyLossPercent.WithLabelValues(append(baseGeo, "upload")...).Set(result.LoadedLatencyUpload.Loss * 100)
+	LatencyLossPercent.WithLabelValues(append(baseGeo, "upload")...).Observe(result.LoadedLatencyUpload.Loss * 100)
 
 	// DNS metrics
 	if result.Dns != nil {

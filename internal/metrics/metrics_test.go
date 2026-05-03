@@ -38,12 +38,12 @@ func freshMetrics(t *testing.T) *prometheus.Registry {
 		Name: "speedtest_latency_ms", Help: ".", Buckets: latencyBuckets,
 	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
-	LatencyJitterMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_latency_jitter_ms", Help: ".",
+	LatencyJitterMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "speedtest_latency_jitter_ms", Help: ".", Buckets: latencyBuckets,
 	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
-	LatencyLossPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_latency_loss_percent", Help: ".",
+	LatencyLossPercent = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "speedtest_latency_loss_percent", Help: ".", Buckets: lossBuckets,
 	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
 	DnsResolutionTimeMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -270,8 +270,8 @@ func TestUpdateMetricsIdleLatency(t *testing.T) {
 	if mJ == nil {
 		t.Fatal("speedtest_latency_jitter_ms{during=\"idle\"} not found")
 	}
-	if mJ.GetGauge().GetValue() != 2.0 {
-		t.Errorf("jitter = %v, want 2.0", mJ.GetGauge().GetValue())
+	if mJ.GetHistogram().GetSampleSum() != 2.0 {
+		t.Errorf("jitter sum = %v, want 2.0", mJ.GetHistogram().GetSampleSum())
 	}
 
 	mfL := gather(t, reg, "speedtest_latency_loss_percent")
@@ -279,8 +279,8 @@ func TestUpdateMetricsIdleLatency(t *testing.T) {
 	if mL == nil {
 		t.Fatal("speedtest_latency_loss_percent{during=\"idle\"} not found")
 	}
-	if mL.GetGauge().GetValue() != 0 {
-		t.Errorf("loss = %v, want 0", mL.GetGauge().GetValue())
+	if mL.GetHistogram().GetSampleSum() != 0 {
+		t.Errorf("loss sum = %v, want 0", mL.GetHistogram().GetSampleSum())
 	}
 }
 
@@ -302,8 +302,8 @@ func TestUpdateMetricsLoadedLatencyDownload(t *testing.T) {
 	if mL == nil {
 		t.Fatal("speedtest_latency_loss_percent{during=\"download\"} not found")
 	}
-	if mL.GetGauge().GetValue() != 10.0 {
-		t.Errorf("download loss = %v, want 10.0", mL.GetGauge().GetValue())
+	if mL.GetHistogram().GetSampleSum() != 10.0 {
+		t.Errorf("download loss sum = %v, want 10.0", mL.GetHistogram().GetSampleSum())
 	}
 }
 
@@ -325,8 +325,8 @@ func TestUpdateMetricsLoadedLatencyUpload(t *testing.T) {
 	if mL == nil {
 		t.Fatal("speedtest_latency_loss_percent{during=\"upload\"} not found")
 	}
-	if mL.GetGauge().GetValue() != 20.0 {
-		t.Errorf("upload loss = %v, want 20.0", mL.GetGauge().GetValue())
+	if mL.GetHistogram().GetSampleSum() != 20.0 {
+		t.Errorf("upload loss sum = %v, want 20.0", mL.GetHistogram().GetSampleSum())
 	}
 }
 
