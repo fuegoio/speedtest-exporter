@@ -92,7 +92,7 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 ```bash
 # Run with default configuration
-docker run -d -p 9537:9537 --name speedtest-exporter ghcr.io/alexis/speedtest-exporter:latest
+docker run -d -p 9537:9537 --name speedtest-exporter ghcr.io/fuegoio/speedtest-exporter:latest
 
 # Or build from source
 docker build -t speedtest-exporter .
@@ -132,14 +132,14 @@ All configuration is done via environment variables:
 | `PROBE_TIMEOUT_MS`  | 800                          | Timeout for individual probes          |
 | `SKIP_DIAGNOSTICS`  | false                        | Skip DNS and TLS diagnostics           |
 
-| `ASN`               | -                            | Override ASN                           |
-| `AS_ORG`            | -                            | Override AS organization               |
-| `INTERFACE_NAME`    | -                            | Override interface name                |
-| `NETWORK_NAME`      | -                            | Override network name                  |
-| `LOCAL_IPV4`        | -                            | Override local IPv4                    |
-| `LOCAL_IPV6`        | -                            | Override local IPv6                    |
-| `EXTERNAL_IPV4`     | -                            | Override external IPv4                 |
-| `EXTERNAL_IPV6`     | -                            | Override external IPv6                 |
+| `ASN` | - | Override ASN |
+| `AS_ORG` | - | Override AS organization |
+| `INTERFACE_NAME` | - | Override interface name |
+| `NETWORK_NAME` | - | Override network name |
+| `LOCAL_IPV4` | - | Override local IPv4 |
+| `LOCAL_IPV6` | - | Override local IPv6 |
+| `EXTERNAL_IPV4` | - | Override external IPv4 |
+| `EXTERNAL_IPV6` | - | Override external IPv6 |
 
 ### Example with custom configuration
 
