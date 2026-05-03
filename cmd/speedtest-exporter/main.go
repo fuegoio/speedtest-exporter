@@ -96,10 +96,10 @@ func (e *SpeedtestExporter) Start() error {
 		}
 	}()
 
+	log.Printf("Speedtest Exporter started successfully. Initial test will run immediately.")
+
 	// Start periodic tests
 	e.startPeriodicTests()
-
-	log.Printf("Speedtest Exporter started successfully. Initial test will run immediately.")
 
 	return nil
 }
