@@ -19,7 +19,7 @@ var (
 			Name: "speedtest_download_mbps",
 			Help: "Current download speed in Mbps",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
 	DownloadBytesTotal = prometheus.NewGaugeVec(
@@ -27,7 +27,7 @@ var (
 			Name: "speedtest_download_bytes_total",
 			Help: "Total bytes downloaded in the last test",
 		},
-		[]string{"server", "colo", "asn", "as_org"},
+		[]string{"server", "colo", "asn", "as_org", "size"},
 	)
 
 	DownloadDurationMs = prometheus.NewGaugeVec(
@@ -35,7 +35,7 @@ var (
 			Name: "speedtest_download_duration_ms",
 			Help: "Duration of download test in milliseconds",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "size"},
 	)
 
 	// Upload metrics
@@ -44,7 +44,7 @@ var (
 			Name: "speedtest_upload_mbps",
 			Help: "Current upload speed in Mbps",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
 	)
 
 	UploadBytesTotal = prometheus.NewGaugeVec(
@@ -52,7 +52,7 @@ var (
 			Name: "speedtest_upload_bytes_total",
 			Help: "Total bytes uploaded in the last test",
 		},
-		[]string{"server", "colo", "asn", "as_org"},
+		[]string{"server", "colo", "asn", "as_org", "size"},
 	)
 
 	UploadDurationMs = prometheus.NewGaugeVec(
@@ -60,7 +60,7 @@ var (
 			Name: "speedtest_upload_duration_ms",
 			Help: "Duration of upload test in milliseconds",
 		},
-		[]string{"server", "colo"},
+		[]string{"server", "colo", "size"},
 	)
 
 	// Idle latency metrics
@@ -333,6 +333,7 @@ var (
 		},
 		[]string{"status"},
 	)
+
 )
 
 // RegisterAll registers all metrics with the given registry
@@ -389,22 +390,22 @@ func UpdateMetrics(result *model.RunResult) {
 	totalDuration := result.Download.DurationMs + result.Upload.DurationMs
 	TestDurationTotalMs.Set(float64(totalDuration))
 
-	// Download metrics
-	DownloadMbps.With(labels).Set(result.Download.Mbps)
+	// Download metrics (with size label - use "total" for overall)
+	DownloadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Set(result.Download.Mbps)
 	DownloadBytesTotal.WithLabelValues(
-		labels["server"], labels["colo"], labels["asn"], labels["as_org"],
+		labels["server"], labels["colo"], labels["asn"], labels["as_org"], "total",
 	).Set(float64(result.Download.Bytes))
 	DownloadDurationMs.WithLabelValues(
-		labels["server"], labels["colo"],
+		labels["server"], labels["colo"], "total",
 	).Set(float64(result.Download.DurationMs))
 
-	// Upload metrics
-	UploadMbps.With(labels).Set(result.Upload.Mbps)
+	// Upload metrics (with size label - use "total" for overall)
+	UploadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Set(result.Upload.Mbps)
 	UploadBytesTotal.WithLabelValues(
-		labels["server"], labels["colo"], labels["asn"], labels["as_org"],
+		labels["server"], labels["colo"], labels["asn"], labels["as_org"], "total",
 	).Set(float64(result.Upload.Bytes))
 	UploadDurationMs.WithLabelValues(
-		labels["server"], labels["colo"],
+		labels["server"], labels["colo"], "total",
 	).Set(float64(result.Upload.DurationMs))
 
 	// Idle latency metrics
@@ -438,7 +439,7 @@ func UpdateMetrics(result *model.RunResult) {
 
 	// Loaded latency (download) metrics
 	loadedLabels := labels
-	loadedLabels["type"] = "current"
+	loadedLabels["type"] = "download"
 	LoadedLatencyDownloadMs.With(loadedLabels).Set(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
 	LoadedLatencyDownloadMinMs.WithLabelValues(
 		labels["server"], labels["colo"],
@@ -457,7 +458,9 @@ func UpdateMetrics(result *model.RunResult) {
 	).Set(result.LoadedLatencyDownload.Loss * 100)
 
 	// Loaded latency (upload) metrics
-	LoadedLatencyUploadMs.With(loadedLabels).Set(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
+	loadedLabelsUpload := labels
+	loadedLabelsUpload["type"] = "upload"
+	LoadedLatencyUploadMs.With(loadedLabelsUpload).Set(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
 	LoadedLatencyUploadMinMs.WithLabelValues(
 		labels["server"], labels["colo"],
 	).Set(derefFloat64(result.LoadedLatencyUpload.MinMs, 0))

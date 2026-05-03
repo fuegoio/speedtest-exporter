@@ -2,6 +2,7 @@ package engine
 
 import (
 	"testing"
+	"time"
 
 	"github.com/fuegoio/speedtest-exporter/internal/config"
 	"github.com/fuegoio/speedtest-exporter/internal/model"
@@ -199,4 +200,76 @@ func TestThroughputSummaryJSON(t *testing.T) {
 	if summary.Mbps != 8.0 {
 		t.Errorf("Mbps = %v, expected 8.0", summary.Mbps)
 	}
+}
+
+// TestSpeedtestIntegration tests the full speed test against real Cloudflare servers.
+// This is an integration test that requires network access to speed.cloudflare.com.
+// Run with: go test -v -run TestSpeedtestIntegration -timeout 60s
+func TestSpeedtestIntegration(t *testing.T) {
+	// Skip if running in short mode or if network is not available
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	cfg := config.ExporterConfig{
+		BaseURL:               "https://speed.cloudflare.com",
+		DownloadDurationMs:    5 * time.Second,  // 5 seconds
+		UploadDurationMs:      5 * time.Second,  // 5 seconds
+		IdleLatencyDurationMs: 2 * time.Second,  // 2 seconds
+		Concurrency:           4,                // 4 concurrent connections
+		DownloadBytesPerReq:   1000000,           // 1MB per download request
+		UploadBytesPerReq:     100000,            // 100KB per upload request
+		ProbeTimeoutMs:        10 * time.Second,  // 10 second timeout
+		ProbeIntervalMs:       100 * time.Millisecond, // 100ms between probes
+		SkipDiagnostics:       true,   // Skip DNS/TLS to speed up tests
+	}
+
+	speedtest := NewCloudflareSpeedtest(cfg)
+
+	result, err := speedtest.RunDirectTest()
+	if err != nil {
+		t.Fatalf("RunDirectTest failed: %v", err)
+	}
+
+	// Verify result is not nil
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	// Verify server and colo are set
+	if result.Server == nil || *result.Server == "" {
+		t.Error("Expected server to be set")
+	}
+	if result.Colo == nil || *result.Colo == "" {
+		t.Error("Expected colo to be set")
+	}
+
+	// Verify download speed is reasonable (> 0)
+	if result.Download.Mbps <= 0 {
+		t.Errorf("Expected positive download speed, got: %.2f Mbps", result.Download.Mbps)
+	}
+	if result.Download.Bytes == 0 {
+		t.Error("Expected to download some bytes")
+	}
+
+	// Verify upload speed is reasonable (> 0)
+	if result.Upload.Mbps <= 0 {
+		t.Errorf("Expected positive upload speed, got: %.2f Mbps", result.Upload.Mbps)
+	}
+	if result.Upload.Bytes == 0 {
+		t.Error("Expected to upload some bytes")
+	}
+
+	// Verify latency measurements
+	if result.IdleLatency.MedianMs == nil {
+		t.Error("Expected idle latency median to be set")
+	} else if *result.IdleLatency.MedianMs < 0 {
+		t.Errorf("Expected non-negative idle latency, got: %f ms", *result.IdleLatency.MedianMs)
+	}
+
+	// Log results for debugging
+	t.Logf("Server: %s, Colo: %s", *result.Server, *result.Colo)
+	t.Logf("Download: %.2f Mbps (%d bytes in %v)", result.Download.Mbps, result.Download.Bytes, time.Duration(result.Download.DurationMs)*time.Millisecond)
+	t.Logf("Upload: %.2f Mbps (%d bytes in %v)", result.Upload.Mbps, result.Upload.Bytes, time.Duration(result.Upload.DurationMs)*time.Millisecond)
+	t.Logf("Idle Latency: median=%.2fms, loss=%.2f%%", *result.IdleLatency.MedianMs, result.IdleLatency.Loss*100)
 }
