@@ -215,9 +215,9 @@ func UpdateMetrics(result *model.RunResult) {
 	baseGeo := append(base, geo...)
 
 	// Download metrics (histogram)
-	DownloadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Download.Mbps)
+	DownloadMbps.WithLabelValues(append(baseGeo, "max")...).Observe(result.Download.Mbps)
 	// Upload metrics (histogram)
-	UploadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Upload.Mbps)
+	UploadMbps.WithLabelValues(append(baseGeo, "max")...).Observe(result.Upload.Mbps)
 
 	// Latency metrics
 	LatencyMs.WithLabelValues(append(baseGeo, "idle")...).Observe(derefFloat64(result.IdleLatency.MedianMs, 0))

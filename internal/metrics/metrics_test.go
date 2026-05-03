@@ -666,7 +666,7 @@ func TestUpdateMetricsLabels(t *testing.T) {
 		"postal_code": "94105",
 		"latitude":    "37.7749",
 		"longitude":   "-122.4194",
-		"size":        "total",
+		"size":        "max",
 	}
 	for k, want := range expected {
 		if got := labelMap[k]; got != want {
