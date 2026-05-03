@@ -33,26 +33,17 @@ While it uses Cloudflare's public speed test endpoints as the default target, th
 
 **Note**: Both metrics are histograms. Use `histogram_quantile()` in PromQL for percentile calculations.
 
-### Latency Metrics (Idle)
+### Latency Metrics
 
-| Metric                                | Labels                                                          | Description                                     |
-| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| `speedtest_idle_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Idle latency in milliseconds (histogram)        |
-| `speedtest_idle_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version       | Idle latency jitter                             |
-| `speedtest_idle_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during idle latency test |
+| Metric                           | Labels                                                                        | Description                              |
+| -------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------- |
+| `speedtest_latency_ms`           | server, colo, asn, as_org, interface, network, ip_version, during             | Latency in milliseconds (histogram)      |
+| `speedtest_latency_jitter_ms`    | server, colo, asn, as_org, interface, network, ip_version, during             | Latency jitter                           |
+| `speedtest_latency_loss_percent` | server, colo, asn, as_org, interface, network, ip_version, during             | Packet loss percentage                   |
 
-**Note**: `speedtest_idle_latency_ms` is a histogram metric. Percentiles (p50, p75, p90, p95, p99) are automatically available through Prometheus histogram functions.
+The `during` label is `idle`, `download`, or `upload`.
 
-### Loaded Latency Metrics (During Download/Upload)
-
-| Metric                                           | Labels                                                          | Description                                 |
-| ------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------- |
-| `speedtest_loaded_latency_download_ms`           | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during download (histogram)  |
-| `speedtest_loaded_latency_upload_ms`             | server, colo, asn, as_org, interface, network, ip_version, type | Loaded latency during upload (histogram)    |
-| `speedtest_loaded_latency_download_loss_percent` | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during download test |
-| `speedtest_loaded_latency_upload_loss_percent`   | server, colo, asn, as_org, interface, network, ip_version       | Packet loss percentage during upload test   |
-
-**Note**: `speedtest_loaded_latency_download_ms` and `speedtest_loaded_latency_upload_ms` are histogram metrics. Percentiles are automatically available through Prometheus histogram functions.
+**Note**: `speedtest_latency_ms` is a histogram metric. Percentiles (p50, p75, p90, p95, p99) are automatically available through Prometheus histogram functions.
 
 ### DNS Metrics
 

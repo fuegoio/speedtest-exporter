@@ -34,33 +34,17 @@ func freshMetrics(t *testing.T) *prometheus.Registry {
 		Name: "speedtest_upload_mbps", Help: ".", Buckets: throughputBuckets,
 	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"})
 
-	IdleLatencyMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "speedtest_idle_latency_ms", Help: ".", Buckets: latencyBuckets,
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"})
+	LatencyMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "speedtest_latency_ms", Help: ".", Buckets: latencyBuckets,
+	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
-	IdleLatencyJitterMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_idle_latency_jitter_ms", Help: ".",
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"})
+	LatencyJitterMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "speedtest_latency_jitter_ms", Help: ".",
+	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
-	LoadedLatencyDownloadMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "speedtest_loaded_latency_download_ms", Help: ".", Buckets: latencyBuckets,
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"})
-
-	LoadedLatencyUploadMs = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "speedtest_loaded_latency_upload_ms", Help: ".", Buckets: latencyBuckets,
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"})
-
-	IdleLatencyLossPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_idle_latency_loss_percent", Help: ".",
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"})
-
-	LoadedLatencyDownloadLossPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_loaded_latency_download_loss_percent", Help: ".",
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"})
-
-	LoadedLatencyUploadLossPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "speedtest_loaded_latency_upload_loss_percent", Help: ".",
-	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"})
+	LatencyLossPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "speedtest_latency_loss_percent", Help: ".",
+	}, []string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "during"})
 
 	DnsResolutionTimeMs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "speedtest_dns_resolution_time_ms", Help: ".",
@@ -127,6 +111,22 @@ func gather(t *testing.T, reg *prometheus.Registry, name string) *dto.MetricFami
 	for _, mf := range mfs {
 		if mf.GetName() == name {
 			return mf
+		}
+	}
+	return nil
+}
+
+// gatherMetric returns the single dto.Metric from a MetricFamily that has the
+// given label value, or nil if not found.
+func gatherMetric(mf *dto.MetricFamily, labelName, labelValue string) *dto.Metric {
+	if mf == nil {
+		return nil
+	}
+	for _, m := range mf.GetMetric() {
+		for _, lp := range m.GetLabel() {
+			if lp.GetName() == labelName && lp.GetValue() == labelValue {
+				return m
+			}
 		}
 	}
 	return nil
@@ -264,29 +264,31 @@ func TestUpdateMetricsIdleLatency(t *testing.T) {
 	reg := freshMetrics(t)
 	UpdateMetrics(buildResult())
 
-	mf := gather(t, reg, "speedtest_idle_latency_ms")
-	if mf == nil {
-		t.Fatal("speedtest_idle_latency_ms not found")
+	mf := gather(t, reg, "speedtest_latency_ms")
+	m := gatherMetric(mf, "during", "idle")
+	if m == nil {
+		t.Fatal("speedtest_latency_ms{during=\"idle\"} not found")
 	}
-	h := mf.GetMetric()[0].GetHistogram()
-	if h.GetSampleSum() != 9.5 {
-		t.Errorf("idle latency sum = %v, want 9.5 (median)", h.GetSampleSum())
-	}
-
-	mfJ := gather(t, reg, "speedtest_idle_latency_jitter_ms")
-	if mfJ == nil {
-		t.Fatal("speedtest_idle_latency_jitter_ms not found")
-	}
-	if mfJ.GetMetric()[0].GetGauge().GetValue() != 2.0 {
-		t.Errorf("jitter = %v, want 2.0", mfJ.GetMetric()[0].GetGauge().GetValue())
+	if m.GetHistogram().GetSampleSum() != 9.5 {
+		t.Errorf("idle latency sum = %v, want 9.5", m.GetHistogram().GetSampleSum())
 	}
 
-	mfL := gather(t, reg, "speedtest_idle_latency_loss_percent")
-	if mfL == nil {
-		t.Fatal("speedtest_idle_latency_loss_percent not found")
+	mfJ := gather(t, reg, "speedtest_latency_jitter_ms")
+	mJ := gatherMetric(mfJ, "during", "idle")
+	if mJ == nil {
+		t.Fatal("speedtest_latency_jitter_ms{during=\"idle\"} not found")
 	}
-	if mfL.GetMetric()[0].GetGauge().GetValue() != 0 {
-		t.Errorf("loss = %v, want 0", mfL.GetMetric()[0].GetGauge().GetValue())
+	if mJ.GetGauge().GetValue() != 2.0 {
+		t.Errorf("jitter = %v, want 2.0", mJ.GetGauge().GetValue())
+	}
+
+	mfL := gather(t, reg, "speedtest_latency_loss_percent")
+	mL := gatherMetric(mfL, "during", "idle")
+	if mL == nil {
+		t.Fatal("speedtest_latency_loss_percent{during=\"idle\"} not found")
+	}
+	if mL.GetGauge().GetValue() != 0 {
+		t.Errorf("loss = %v, want 0", mL.GetGauge().GetValue())
 	}
 }
 
@@ -294,21 +296,22 @@ func TestUpdateMetricsLoadedLatencyDownload(t *testing.T) {
 	reg := freshMetrics(t)
 	UpdateMetrics(buildResult())
 
-	mf := gather(t, reg, "speedtest_loaded_latency_download_ms")
-	if mf == nil {
-		t.Fatal("speedtest_loaded_latency_download_ms not found")
+	mf := gather(t, reg, "speedtest_latency_ms")
+	m := gatherMetric(mf, "during", "download")
+	if m == nil {
+		t.Fatal("speedtest_latency_ms{during=\"download\"} not found")
 	}
-	h := mf.GetMetric()[0].GetHistogram()
-	if h.GetSampleSum() != 25.0 {
-		t.Errorf("loaded download latency sum = %v, want 25.0", h.GetSampleSum())
+	if m.GetHistogram().GetSampleSum() != 25.0 {
+		t.Errorf("download latency sum = %v, want 25.0", m.GetHistogram().GetSampleSum())
 	}
 
-	mfL := gather(t, reg, "speedtest_loaded_latency_download_loss_percent")
-	if mfL == nil {
-		t.Fatal("speedtest_loaded_latency_download_loss_percent not found")
+	mfL := gather(t, reg, "speedtest_latency_loss_percent")
+	mL := gatherMetric(mfL, "during", "download")
+	if mL == nil {
+		t.Fatal("speedtest_latency_loss_percent{during=\"download\"} not found")
 	}
-	if mfL.GetMetric()[0].GetGauge().GetValue() != 10.0 {
-		t.Errorf("download loss = %v, want 10.0", mfL.GetMetric()[0].GetGauge().GetValue())
+	if mL.GetGauge().GetValue() != 10.0 {
+		t.Errorf("download loss = %v, want 10.0", mL.GetGauge().GetValue())
 	}
 }
 
@@ -316,21 +319,22 @@ func TestUpdateMetricsLoadedLatencyUpload(t *testing.T) {
 	reg := freshMetrics(t)
 	UpdateMetrics(buildResult())
 
-	mf := gather(t, reg, "speedtest_loaded_latency_upload_ms")
-	if mf == nil {
-		t.Fatal("speedtest_loaded_latency_upload_ms not found")
+	mf := gather(t, reg, "speedtest_latency_ms")
+	m := gatherMetric(mf, "during", "upload")
+	if m == nil {
+		t.Fatal("speedtest_latency_ms{during=\"upload\"} not found")
 	}
-	h := mf.GetMetric()[0].GetHistogram()
-	if h.GetSampleSum() != 30.0 {
-		t.Errorf("loaded upload latency sum = %v, want 30.0", h.GetSampleSum())
+	if m.GetHistogram().GetSampleSum() != 30.0 {
+		t.Errorf("upload latency sum = %v, want 30.0", m.GetHistogram().GetSampleSum())
 	}
 
-	mfL := gather(t, reg, "speedtest_loaded_latency_upload_loss_percent")
-	if mfL == nil {
-		t.Fatal("speedtest_loaded_latency_upload_loss_percent not found")
+	mfL := gather(t, reg, "speedtest_latency_loss_percent")
+	mL := gatherMetric(mfL, "during", "upload")
+	if mL == nil {
+		t.Fatal("speedtest_latency_loss_percent{during=\"upload\"} not found")
 	}
-	if mfL.GetMetric()[0].GetGauge().GetValue() != 20.0 {
-		t.Errorf("upload loss = %v, want 20.0", mfL.GetMetric()[0].GetGauge().GetValue())
+	if mL.GetGauge().GetValue() != 20.0 {
+		t.Errorf("upload loss = %v, want 20.0", mL.GetGauge().GetValue())
 	}
 }
 
@@ -578,7 +582,7 @@ func TestHandlerServesCustomRegistry(t *testing.T) {
 	for _, metric := range []string{
 		"speedtest_download_mbps",
 		"speedtest_upload_mbps",
-		"speedtest_idle_latency_ms",
+		"speedtest_latency_ms",
 		"speedtest_test_runs_total",
 		"speedtest_test_timestamp",
 	} {
