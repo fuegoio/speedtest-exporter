@@ -17,7 +17,7 @@ COPY src/ ./src/
 
 # Compile the application to a standalone executable
 # --compile bundles the Bun runtime and all dependencies into a single binary
-RUN bun build --compile --outdir /app/dist src/index.ts
+RUN bun build --compile --outfile /app/dist/index src/index.ts
 
 # Final stage: Minimal runtime image
 FROM alpine:3.20
