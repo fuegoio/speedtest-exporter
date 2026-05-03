@@ -35,7 +35,7 @@ var (
 			Help:    "Download speed in Mbps (histogram)",
 			Buckets: throughputBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
 
 	// Download duration as histogram
@@ -45,7 +45,7 @@ var (
 			Help:    "Duration of download test in milliseconds",
 			Buckets: durationBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
 
 	// Upload histogram (replaces UploadMbps gauge)
@@ -55,7 +55,7 @@ var (
 			Help:    "Upload speed in Mbps (histogram)",
 			Buckets: throughputBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
 
 	// Upload duration as histogram
@@ -65,7 +65,7 @@ var (
 			Help:    "Duration of upload test in milliseconds",
 			Buckets: durationBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "size"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "size"},
 	)
 
 	// Idle latency histogram
@@ -75,7 +75,7 @@ var (
 			Help:    "Idle latency in milliseconds",
 			Buckets: latencyBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"},
 	)
 
 	IdleLatencyJitterMs = prometheus.NewGaugeVec(
@@ -83,7 +83,7 @@ var (
 			Name: "speedtest_idle_latency_jitter_ms",
 			Help: "Idle latency jitter in milliseconds",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"},
 	)
 
 	// Loaded latency (download) histogram
@@ -93,7 +93,7 @@ var (
 			Help:    "Loaded latency during download in milliseconds",
 			Buckets: latencyBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"},
 	)
 
 	// Loaded latency (upload) histogram
@@ -103,7 +103,7 @@ var (
 			Help:    "Loaded latency during upload in milliseconds",
 			Buckets: latencyBuckets,
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "type"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude", "type"},
 	)
 
 	// Packet loss metrics
@@ -112,7 +112,7 @@ var (
 			Name: "speedtest_idle_latency_loss_percent",
 			Help: "Packet loss percentage during idle latency test",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"},
 	)
 
 	LoadedLatencyDownloadLossPercent = prometheus.NewGaugeVec(
@@ -120,7 +120,7 @@ var (
 			Name: "speedtest_loaded_latency_download_loss_percent",
 			Help: "Packet loss percentage during download test",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"},
 	)
 
 	LoadedLatencyUploadLossPercent = prometheus.NewGaugeVec(
@@ -128,7 +128,7 @@ var (
 			Name: "speedtest_loaded_latency_upload_loss_percent",
 			Help: "Packet loss percentage during upload test",
 		},
-		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version"},
+		[]string{"server", "colo", "asn", "as_org", "interface", "network", "ip_version", "country", "city", "region", "postal_code", "latitude", "longitude"},
 	)
 
 	// DNS metrics
@@ -263,13 +263,19 @@ func Handler() http.Handler {
 // UpdateMetrics updates all Prometheus metrics from a RunResult
 func UpdateMetrics(result *model.RunResult) {
 	labels := map[string]string{
-		"server":     derefString(result.Server, "unknown"),
-		"colo":       derefString(result.Colo, "unknown"),
-		"asn":        derefString(result.Asn, "unknown"),
-		"as_org":     derefString(result.AsOrg, "unknown"),
-		"interface":  derefString(result.InterfaceName, "unknown"),
-		"network":    derefString(result.NetworkName, "unknown"),
-		"ip_version": getIPVersion(result),
+		"server":      derefString(result.Server, "unknown"),
+		"colo":        derefString(result.Colo, "unknown"),
+		"asn":         derefString(result.Asn, "unknown"),
+		"as_org":      derefString(result.AsOrg, "unknown"),
+		"interface":   derefString(result.InterfaceName, "unknown"),
+		"network":     derefString(result.NetworkName, "unknown"),
+		"ip_version":  getIPVersion(result),
+		"country":     derefString(result.Country, "unknown"),
+		"city":        derefString(result.City, "unknown"),
+		"region":      derefString(result.Region, "unknown"),
+		"postal_code": derefString(result.PostalCode, "unknown"),
+		"latitude":    derefString(result.Latitude, "unknown"),
+		"longitude":   derefString(result.Longitude, "unknown"),
 	}
 
 	// Increment test run counter
@@ -282,32 +288,30 @@ func UpdateMetrics(result *model.RunResult) {
 	totalDuration := result.Download.DurationMs + result.Upload.DurationMs
 	TestDurationTotalMs.Set(float64(totalDuration))
 
+	geo := []string{labels["country"], labels["city"], labels["region"], labels["postal_code"], labels["latitude"], labels["longitude"]}
+	base := []string{labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]}
+	baseGeo := append(base, geo...)
+
 	// Download metrics (histogram)
-	DownloadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(result.Download.Mbps)
-	DownloadDurationMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(float64(result.Download.DurationMs))
+	DownloadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Download.Mbps)
+	DownloadDurationMs.WithLabelValues(append(baseGeo, "total")...).Observe(float64(result.Download.DurationMs))
 
 	// Upload metrics (histogram)
-	UploadMbps.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(result.Upload.Mbps)
-	UploadDurationMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "total").Observe(float64(result.Upload.DurationMs))
+	UploadMbps.WithLabelValues(append(baseGeo, "total")...).Observe(result.Upload.Mbps)
+	UploadDurationMs.WithLabelValues(append(baseGeo, "total")...).Observe(float64(result.Upload.DurationMs))
 
 	// Idle latency metrics (histogram)
-	idleLabels := labels
-	idleLabels["type"] = "idle"
-	IdleLatencyMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "idle").Observe(derefFloat64(result.IdleLatency.MedianMs, 0))
-	IdleLatencyJitterMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(derefFloat64(result.IdleLatency.JitterMs, 0))
-	IdleLatencyLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.IdleLatency.Loss * 100)
+	IdleLatencyMs.WithLabelValues(append(baseGeo, "idle")...).Observe(derefFloat64(result.IdleLatency.MedianMs, 0))
+	IdleLatencyJitterMs.WithLabelValues(baseGeo...).Set(derefFloat64(result.IdleLatency.JitterMs, 0))
+	IdleLatencyLossPercent.WithLabelValues(baseGeo...).Set(result.IdleLatency.Loss * 100)
 
 	// Loaded latency (download) metrics (histogram)
-	loadedLabels := labels
-	loadedLabels["type"] = "download"
-	LoadedLatencyDownloadMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "download").Observe(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
-	LoadedLatencyDownloadLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.LoadedLatencyDownload.Loss * 100)
+	LoadedLatencyDownloadMs.WithLabelValues(append(baseGeo, "download")...).Observe(derefFloat64(result.LoadedLatencyDownload.MedianMs, 0))
+	LoadedLatencyDownloadLossPercent.WithLabelValues(baseGeo...).Set(result.LoadedLatencyDownload.Loss * 100)
 
 	// Loaded latency (upload) metrics (histogram)
-	loadedLabelsUpload := labels
-	loadedLabelsUpload["type"] = "upload"
-	LoadedLatencyUploadMs.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"], "upload").Observe(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
-	LoadedLatencyUploadLossPercent.WithLabelValues(labels["server"], labels["colo"], labels["asn"], labels["as_org"], labels["interface"], labels["network"], labels["ip_version"]).Set(result.LoadedLatencyUpload.Loss * 100)
+	LoadedLatencyUploadMs.WithLabelValues(append(baseGeo, "upload")...).Observe(derefFloat64(result.LoadedLatencyUpload.MedianMs, 0))
+	LoadedLatencyUploadLossPercent.WithLabelValues(baseGeo...).Set(result.LoadedLatencyUpload.Loss * 100)
 
 	// DNS metrics
 	if result.Dns != nil {

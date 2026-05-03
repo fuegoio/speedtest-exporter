@@ -67,4 +67,11 @@ type RunResult struct {
 	LocalIpv6    *string `json:"local_ipv6,omitempty"`
 	ExternalIpv4 *string `json:"external_ipv4,omitempty"`
 	ExternalIpv6 *string `json:"external_ipv6,omitempty"`
+	// Geo information
+	Country    *string `json:"country,omitempty"`
+	City       *string `json:"city,omitempty"`
+	Region     *string `json:"region,omitempty"`
+	PostalCode *string `json:"postal_code,omitempty"`
+	Latitude   *string `json:"latitude,omitempty"`
+	Longitude  *string `json:"longitude,omitempty"`
 }

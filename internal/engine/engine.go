@@ -1,10 +1,10 @@
 package engine
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -189,34 +188,46 @@ func fetchWithTimeout(client *http.Client, url string, timeout time.Duration) (*
 	return client.Do(req)
 }
 
-// getTraceInfo gets all info from Cloudflare trace in a single request
-func getTraceInfo(baseURL string, client *http.Client) (externalIP, server, colo, asn, asOrg string, err error) {
-	url := baseURL + "/cdn-cgi/trace"
-	resp, err := fetchWithTimeout(client, url, 5*time.Second)
+// metaResponse is the JSON response from https://speed.cloudflare.com/meta
+type metaResponse struct {
+	ClientIp        string `json:"clientIp"`
+	Asn             int    `json:"asn"`
+	AsOrganization  string `json:"asOrganization"`
+	Country         string `json:"country"`
+	City            string `json:"city"`
+	Region          string `json:"region"`
+	PostalCode      string `json:"postalCode"`
+	Latitude        string `json:"latitude"`
+	Longitude       string `json:"longitude"`
+	Colo            struct {
+		IATA string `json:"iata"`
+	} `json:"colo"`
+}
+
+// getMetaInfo fetches network and geo info from https://speed.cloudflare.com/meta
+func getMetaInfo(baseURL string, client *http.Client) (externalIP, colo, asn, asOrg, country, city, region, postalCode, latitude, longitude string, err error) {
+	metaURL := baseURL + "/meta"
+	resp, err := fetchWithTimeout(client, metaURL, 5*time.Second)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "ip=") {
-			externalIP = strings.TrimPrefix(line, "ip=")
-		}
-		if strings.HasPrefix(line, "loc=") {
-			server = strings.TrimPrefix(line, "loc=")
-		}
-		if strings.HasPrefix(line, "colo=") {
-			colo = strings.TrimPrefix(line, "colo=")
-		}
-		if strings.HasPrefix(line, "asn=") {
-			asn = strings.TrimPrefix(line, "asn=")
-		}
-		if strings.HasPrefix(line, "asOrg=") {
-			asOrg = strings.TrimPrefix(line, "asOrg=")
-		}
+	var meta metaResponse
+	if err = json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+		return
 	}
+
+	externalIP = meta.ClientIp
+	colo = meta.Colo.IATA
+	asn = fmt.Sprintf("AS%d", meta.Asn)
+	asOrg = meta.AsOrganization
+	country = meta.Country
+	city = meta.City
+	region = meta.Region
+	postalCode = meta.PostalCode
+	latitude = meta.Latitude
+	longitude = meta.Longitude
 	return
 }
 
@@ -275,7 +286,8 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 		size       int64
 		iterations int
 	},
-	server, colo, asn, asOrg, interfaceName, networkName, ipVersion string,
+	server, colo, asn, asOrg, interfaceName, networkName, ipVersion,
+	country, city, region, postalCode, latitude, longitude string,
 ) []model.ThroughputSummary {
 	var results []model.ThroughputSummary
 
@@ -299,11 +311,11 @@ func (c *CloudflareSpeedtest) runSequentialTests(
 
 			// Update metrics for this specific test
 			if testType == "download" {
-				metrics.DownloadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, sizeLabel).Observe(result.Mbps)
-				metrics.DownloadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, sizeLabel).Observe(float64(result.DurationMs))
+				metrics.DownloadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(result.Mbps)
+				metrics.DownloadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(float64(result.DurationMs))
 			} else {
-				metrics.UploadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, sizeLabel).Observe(result.Mbps)
-				metrics.UploadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, sizeLabel).Observe(float64(result.DurationMs))
+				metrics.UploadMbps.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(result.Mbps)
+				metrics.UploadDurationMs.WithLabelValues(server, colo, asn, asOrg, interfaceName, networkName, ipVersion, country, city, region, postalCode, latitude, longitude, sizeLabel).Observe(float64(result.DurationMs))
 			}
 
 			log.Printf("[Speedtest] %s %s: %.2f Mbps (%d bytes in %v)",
@@ -374,13 +386,14 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 	log.Printf("[Speedtest] Local IPv4: %s, IPv6: %s, Interface: %s, Network: %s",
 		localIpv4, localIpv6, interfaceName, networkName)
 
-	// Get trace info (server, colo, external IP, ASN, ASN Org) from Cloudflare trace
-	log.Printf("[Speedtest] Getting server and network information from Cloudflare trace...")
-	externalIP, server, colo, asn, asOrg, err := getTraceInfo(c.config.BaseURL, c.client)
+	// Get meta info (colo, external IP, ASN, ASN Org, geo) from Cloudflare /meta
+	log.Printf("[Speedtest] Getting server and network information from Cloudflare /meta...")
+	externalIP, colo, asn, asOrg, country, city, region, postalCode, latitude, longitude, err := getMetaInfo(c.config.BaseURL, c.client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get trace info: %w", err)
+		return nil, fmt.Errorf("failed to get meta info: %w", err)
 	}
-	log.Printf("[Speedtest] Server: %s, Colo: %s, External IP: %s", server, colo, externalIP)
+	server := country
+	log.Printf("[Speedtest] Colo: %s, External IP: %s, Country: %s, City: %s", colo, externalIP, country, city)
 	if asn != "" {
 		log.Printf("[Speedtest] ASN: %s, ASN Org: %s", asn, asOrg)
 	}
@@ -412,6 +425,7 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 			{250 * 1024 * 1024, 2}, // 250MB, 2 times
 		},
 		server, colo, asn, asOrg, interfaceName, networkName, ipVersion,
+		country, city, region, postalCode, latitude, longitude,
 	)
 
 	// Run loaded latency tests during download (10 pings)
@@ -432,6 +446,7 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 			{50 * 1024 * 1024, 3}, // 50MB, 3 times
 		},
 		server, colo, asn, asOrg, interfaceName, networkName, ipVersion,
+		country, city, region, postalCode, latitude, longitude,
 	)
 
 	// Run loaded latency tests during upload (10 pings)
@@ -465,6 +480,12 @@ func (c *CloudflareSpeedtest) RunDirectTest() (*model.RunResult, error) {
 		Upload:               *upload,
 		LoadedLatencyDownload: *loadedLatencyDownload,
 		LoadedLatencyUpload:   *loadedLatencyUpload,
+		Country:              &country,
+		City:                 &city,
+		Region:               &region,
+		PostalCode:           &postalCode,
+		Latitude:             &latitude,
+		Longitude:            &longitude,
 	}
 
 	log.Printf("[Speedtest] Test completed successfully with measurement ID: %s", measID)
