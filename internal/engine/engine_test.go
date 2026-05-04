@@ -751,13 +751,13 @@ func TestSpeedtestIntegration(t *testing.T) {
 	}
 
 	cfg := config.ExporterConfig{
-		BaseURL:            "https://speed.cloudflare.com",
-		Concurrency:        4,
-		ProbeTimeoutMs:     10 * time.Second,
-		ProbeIntervalMs:    100 * time.Millisecond,
-		LatencyDurationMs:  10 * time.Second,
-		SkipDns:            true,
-		SkipTls:            true,
+		BaseURL:           "https://speed.cloudflare.com",
+		Concurrency:       4,
+		ProbeTimeoutMs:    10 * time.Second,
+		ProbeIntervalMs:   100 * time.Millisecond,
+		LatencyDurationMs: 10 * time.Second,
+		SkipDns:           true,
+		SkipTls:           true,
 	}
 
 	st := NewCloudflareSpeedtest(cfg)
