@@ -115,6 +115,23 @@ TLS metrics do not carry the common labels.
 
 ## Quick Start
 
+### Using Docker Compose
+
+```yaml
+services:
+  speedtest-exporter:
+    image: ghcr.io/fuegoio/speedtest-exporter:latest
+    ports:
+      - "9537:9537"
+    environment:
+      TEST_INTERVAL_MS: 3600000
+    restart: unless-stopped
+```
+
+```bash
+docker compose up -d
+```
+
 ### Using Docker
 
 ```bash
