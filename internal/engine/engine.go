@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
@@ -551,7 +552,7 @@ func (c *CloudflareSpeedtest) measureLatency(url string, durationMs time.Duratio
 		if err != nil {
 			samples = append(samples, -1) // Mark as loss
 		} else {
-			io.ReadAll(resp.Body)
+			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 			cancel()
 			elapsed := float64(time.Since(start).Milliseconds())
@@ -583,13 +584,12 @@ func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSu
 	}
 	// Start timing after headers arrive — body transfer only.
 	start := time.Now()
-	data, _ := io.ReadAll(resp.Body)
+	bytes, _ := io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
 	cancel()
 	dur := time.Since(start)
 	elapsed := dur.Seconds()
 
-	bytes := int64(len(data))
 	mbps := 0.0
 	if elapsed > 0 {
 		mbps = (float64(bytes) * 8) / (elapsed * 1_000_000)
@@ -605,7 +605,8 @@ func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSu
 // measureSingleUpload POSTs size bytes to url and returns a ThroughputSummary.
 // Timing covers the full request (outbound transfer is what we measure).
 func (c *CloudflareSpeedtest) measureSingleUpload(url string, size int64) *model.ThroughputSummary {
-	body := io.LimitReader(rand.Reader, size)
+	// Use zeros reader - no need for random data for upload speed tests
+	body := io.LimitReader(bytes.NewReader(make([]byte, 64*1024)), size)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -622,7 +623,7 @@ func (c *CloudflareSpeedtest) measureSingleUpload(url string, size int64) *model
 	if err != nil {
 		return &model.ThroughputSummary{}
 	}
-	io.ReadAll(resp.Body)
+	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
 	dur := time.Since(start)
 
@@ -646,7 +647,7 @@ func (c *CloudflareSpeedtest) measureThroughput(url string, duration time.Durati
 		if err != nil {
 			continue
 		}
-		io.ReadAll(resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 		cancel()
 	}
@@ -723,7 +724,7 @@ func (c *CloudflareSpeedtest) measureTls() *model.TlsSummary {
 			continue
 		}
 		elapsed := float64(time.Since(start).Milliseconds())
-		io.ReadAll(resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 
 		samples = append(samples, elapsed)
