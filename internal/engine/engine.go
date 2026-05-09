@@ -606,7 +606,7 @@ func (c *CloudflareSpeedtest) measureSingleFetch(url string) *model.ThroughputSu
 // Timing covers the full request (outbound transfer is what we measure).
 func (c *CloudflareSpeedtest) measureSingleUpload(url string, size int64) *model.ThroughputSummary {
 	// Use zeros reader - no need for random data for upload speed tests
-	body := io.LimitReader(bytes.NewReader(make([]byte, 64*1024)), size)
+	body := bytes.NewReader(make([]byte, size))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
